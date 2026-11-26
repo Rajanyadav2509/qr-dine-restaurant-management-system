@@ -28,11 +28,14 @@ HTML/CSS/JS only. No build step, no framework, no account needed.
   KPIs count up as values change, and a **Live Activity** feed lists every
   event (new order, status change, service request, bill settled) with the
   time. **Instant owner notifications:** the moment a customer sends a
-  message or submits a review, the dashboard plays the same chime, shows a
-  **toast at the top** ("New message from …" with an Open chat button, or
-  "New review — 5★ from …" with a View reviews button, auto-dismiss ~8s),
-  and adds a Live Activity entry — so the owner knows at once, without
-  opening anything. The owner's own replies never notify. **Today's Highlights** show the best-selling dish, busiest table,
+  message, submits a review, or taps a service request (Call Waiter / Water
+  / Bill Please / Clean Table), the dashboard plays the same chime, shows a
+  **toast at the top** ("New message from …" with an Open chat button,
+  "New review — 5★ from …" with a View reviews button, or "Call Waiter —
+  Table 1" with a View requests button that jumps to the Service Requests
+  section, auto-dismiss ~8s), and adds a Live Activity entry — so the owner
+  knows at once, without opening anything. The owner's own replies never
+  notify. **Today's Highlights** show the best-selling dish, busiest table,
   average bill and items served — all computed from today's real orders.
   The header shows a pulsing green **LIVE** dot when the shared database is
   connected (grey "Offline demo" when it is not).

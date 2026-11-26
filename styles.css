@@ -361,6 +361,7 @@ code{background:#1e293b;color:#e2e8f0}
 .feed-item:hover,.order-row:hover,.menu-row:hover,.table-row:hover{border-color:#334155}
 .spotlight{background:#131c2e}
 .notify-toast{background:#131c2e}
+.highlight{background:#131c2e}
 @keyframes feedFlash{0%{background:rgba(234,88,12,.28)}100%{background:#131c2e}}
 .live-dot.live-off{background:#64748b}
 

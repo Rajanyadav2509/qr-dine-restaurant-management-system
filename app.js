@@ -242,10 +242,13 @@ function noteRequestRow(r) {
   const prev = state.requests.find(x => x.id === r.id);
   const q = rowToRequest(r);
   applyRequestRow(r);
-  if (!feedReady) return q;
-  if (!prev) logActivity('request', 'req-new:' + q.id, activityTextRequest(q, false));
-  else if (prev.status !== q.status && q.status === 'Done') logActivity('request', 'req-done:' + q.id, activityTextRequest(q, true));
-  return q;
+  if (!feedReady) return false;
+  /* A genuinely new request: toast the owner (once — deduped by id inside
+     notifyServiceRequest) and let the caller chime once. The Realtime echo
+     of a request already in state notifies nothing. */
+  if (!prev) return notifyServiceRequest(q);
+  if (prev.status !== q.status && q.status === 'Done') logActivity('request', 'req-done:' + q.id, activityTextRequest(q, true));
+  return false;
 }
 /* Merge a realtime chat message and tell the owner when it is a NEW
    customer message. The owner's own messages — and the Realtime echo of a
@@ -279,14 +282,17 @@ function showSpotlight(o) {
   if (spotlightTimer) clearTimeout(spotlightTimer);
   spotlightTimer = setTimeout(() => { el.hidden = true; }, 6000);
 }
-/* ---------------- owner notifications: message + review toasts ---------------- */
-/* A customer message or review must reach the owner the moment it happens —
-   a toast at the top of the dashboard (visible on any owner view), the
-   chime, and a Live Activity entry. Owner-sent messages never notify. A
-   message/review arriving twice (Realtime echo + storage event) notifies
-   once: the notified* sets dedupe by id, and the feed dedupes by key. */
+/* ---------------- owner notifications: message + review + request toasts ---------------- */
+/* A customer message, review or service request must reach the owner the
+   moment it happens — a toast at the top of the dashboard (visible on any
+   owner view), the chime, and a Live Activity entry. Owner-sent messages
+   never notify. An event arriving twice (Realtime echo + storage event)
+   notifies once: the notified* sets dedupe by id, and the feed dedupes by
+   key. */
 const notifiedMsgIds = new Set();
 const notifiedReviewIds = new Set();
+const notifiedReqIds = new Set();
+let flashRequestId = null; // request id to flash in the Service Requests feed
 let notifyTimer = null;
 function showNotifyToast(title, bodyHtml, actionLabel, onAction) {
   if (customerMode) return;
@@ -349,6 +355,35 @@ function notifyCustomerReview(r) {
     esc(t ? t.name : '') + ' · ' + esc(r.orderNumber),
     'View reviews', () => showView('reviews'));
   return true;
+}
+/* Service-request toast titles: the two imperative types read as-is, the
+   other two read as a request. */
+const REQUEST_TOAST_LABEL = { 'Call Waiter': 'Call Waiter', 'Water': 'Water requested', 'Bill Please': 'Bill Please', 'Clean Table': 'Clean Table requested' };
+function requestToastTitle(q) {
+  const t = tableById(q.tableId);
+  return (REQUEST_TOAST_LABEL[q.type] || q.type + ' requested') + ' — ' + (t ? t.name : '');
+}
+/* Returns true when this was a genuinely new service request the owner was
+   just told about (toast + feed). The caller plays the chime once. */
+function notifyServiceRequest(q) {
+  if (customerMode || !feedReady) return false;
+  if (notifiedReqIds.has(q.id)) return false;
+  notifiedReqIds.add(q.id);
+  logActivity('request', 'req-new:' + q.id, activityTextRequest(q, false));
+  showNotifyToast(requestToastTitle(q),
+    'Requested ' + esc(new Date(q.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })),
+    'View requests', () => openServiceRequests(q.id));
+  return true;
+}
+/* Open the dashboard's Service Requests section (from a toast): switch to
+   the Dashboard view, scroll the requests feed into view, and flash the
+   request the toast was about. */
+function openServiceRequests(requestId) {
+  flashRequestId = requestId || null;
+  showView('dashboard');
+  const el = $('#requests-feed');
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  if (flashRequestId) setTimeout(() => { flashRequestId = null; }, 3200);
 }
 /* Today's orders, excluding cancelled ones — the shared base for the
    dashboard highlights and the Analytics "today" sections. */
@@ -638,7 +673,7 @@ function subscribeRealtime() {
       if (payload.eventType === 'DELETE') {
         state.requests = state.requests.filter(x => x.id !== payload.old.id);
         renderAll();
-      } else if (payload.new) { noteRequestRow(payload.new); saveLocal(); renderAll(); if (payload.eventType === 'INSERT') playChime(); }
+      } else if (payload.new) { const fresh = noteRequestRow(payload.new); saveLocal(); renderAll(); if (fresh) playChime(); }
     })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'qrdine_messages' }, (payload) => {
       if (payload.eventType === 'DELETE') {
@@ -839,8 +874,7 @@ window.addEventListener('storage', (e) => {
     });
     state.requests.forEach(r => {
       if (r.status === 'New' && !prevReqIds.has(r.id)) {
-        if (feedReady) logActivity('request', 'req-new:' + r.id, activityTextRequest(r, false));
-        chimed = true;
+        if (notifyServiceRequest(r)) chimed = true;
       } else if (feedReady && prevReqStatus.get(r.id) === 'New' && r.status === 'Done') {
         logActivity('request', 'req-done:' + r.id, activityTextRequest(r, true));
       }
@@ -907,7 +941,7 @@ function renderDashboard() {
   const openReqs = state.requests.filter(r => r.status === 'New').sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
   $('#requests-feed').innerHTML = openReqs.length ? openReqs.map(r => {
     const t = tableById(r.tableId);
-    return '<div class="feed-item req-item"><div><strong>' + esc(r.type) + '</strong> · ' + esc(t ? t.name : '') +
+    return '<div class="feed-item req-item' + (r.id === flashRequestId ? ' fresh' : '') + '"><div><strong>' + esc(r.type) + '</strong> · ' + esc(t ? t.name : '') +
       ' · <span class="muted">' + new Date(r.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) + '</span></div>' +
       '<button class="btn btn-sm btn-primary" data-req-done="' + r.id + '">Done</button></div>';
   }).join('') : '<p class="muted">No service requests waiting.</p>';
