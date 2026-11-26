@@ -159,6 +159,16 @@ function newUuid() {
 }
 const isToday = (iso) => new Date(iso).toDateString() === new Date().toDateString();
 const orderItemsTotal = (o) => o.items.reduce((s, it) => s + it.price * it.qty, 0);
+/* The exact amount the customer pays for one order: the final total once
+   Paid (recorded at settle time), otherwise items minus the order's
+   discount. Every place that shows an amount for this order — the Pay Now
+   QR, the Payment Successful card, the owner toast and the printed bill —
+   uses this one helper, so they can never disagree. The amount is never
+   editable: it is fixed text on the customer side. */
+function orderPayAmount(o) {
+  if (o.finalTotal != null) return Math.max(0, o.finalTotal);
+  return Math.max(0, orderItemsTotal(o) - (o.discount || 0));
+}
 const openOrdersFor = (tableId) => state.orders.filter(o => o.tableId === tableId && o.status !== 'Paid' && o.status !== 'Cancelled');
 const tableHasNew = (tableId) => state.orders.some(o => o.tableId === tableId && o.status === 'New');
 function refreshTableStatus(tableId) {
@@ -240,8 +250,12 @@ function renderActivityFeed() {
   const items = (state.activity || []).slice(0, 20);
   feedEl.innerHTML = items.length ? items.map(a => {
     const fresh = lastActivityId === a.id && (Date.now() - new Date(a.at).getTime() < 6000);
-    return '<div class="feed-item activity-item act-' + esc(a.kind) + (fresh ? ' fresh' : '') + '"><span class="act-dot"></span><div class="grow">' + esc(a.text) + '</div><span class="muted">' + new Date(a.at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) + '</span></div>';
+    /* A live (not yet done) service request entry opens the Service
+       Requests view and flashes that request. Done entries are history. */
+    const reqId = (a.kind === 'request' && a.key.indexOf('req-new:') === 0) ? a.key.slice('req-new:'.length) : '';
+    return '<div class="feed-item activity-item act-' + esc(a.kind) + (fresh ? ' fresh' : '') + '"' + (reqId ? ' data-req-id="' + esc(reqId) + '" title="Open in Service Requests"' : '') + '><span class="act-dot"></span><div class="grow">' + esc(a.text) + '</div><span class="muted">' + new Date(a.at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) + '</span></div>';
   }).join('') : '<p class="muted">No activity yet — new orders, status changes and service requests will show up here live.</p>';
+  $$('#activity-feed [data-req-id]').forEach(el => el.addEventListener('click', () => openServiceRequests(el.dataset.reqId)));
 }
 function activityTextOrder(o) {
   const t = tableById(o.tableId);
@@ -255,17 +269,25 @@ function activityTextRequest(r, done) {
   const t = tableById(r.tableId);
   return r.type + (done ? ' done' : ' requested') + ' · ' + (t ? t.name : '');
 }
-/* Merge a realtime order row and log what actually changed. Returns the
-   merged order. Local actions log themselves; the Realtime echo of our own
-   write finds the row already in state, so nothing is logged twice. */
+/* Merge a realtime order row and log what actually changed. Returns true
+   when the owner was just told about a payment received (the caller plays
+   the chime once). Local actions log themselves; the Realtime echo of our
+   own write finds the row already in state, so nothing is logged or
+   toasted twice — an order the owner settled himself never toasts here,
+   because its status is already Paid locally when the echo arrives. */
 function noteOrderRow(r) {
   const prev = state.orders.find(x => x.id === r.id);
   const o = rowToOrder(r);
   applyOrderRow(r);
-  if (!feedReady) return o;
-  if (!prev) { logActivity('order', 'order-new:' + o.id, activityTextOrder(o)); showSpotlight(o); }
-  else if (prev.status !== o.status) { logActivity('status', 'order-status:' + o.id + ':' + o.status, activityTextStatus(o)); }
-  return o;
+  if (!feedReady) return false;
+  if (!prev) { logActivity('order', 'order-new:' + o.id, activityTextOrder(o)); showSpotlight(o); return false; }
+  if (prev.status !== o.status) {
+    logActivity('status', 'order-status:' + o.id + ':' + o.status, activityTextStatus(o));
+    /* The customer just paid on their device: toast the owner with the
+       exact amount. (The activity entry above is the feed entry.) */
+    if (o.status === 'Paid') return notifyPaymentReceived(o);
+  }
+  return false;
 }
 function noteRequestRow(r) {
   const prev = state.requests.find(x => x.id === r.id);
@@ -321,6 +343,11 @@ function showSpotlight(o) {
 const notifiedMsgIds = new Set();
 const notifiedReviewIds = new Set();
 const notifiedReqIds = new Set();
+const notifiedPaidIds = new Set(); // order ids already toasted as "Payment received"
+/* Exact text of the customer message sent when the customer reports a
+   failed payment. The owner side recognises this text and shows the
+   failed-payment toast instead of a normal message toast. */
+const PAYMENT_FAILED_TEXT = 'Payment failed — trying again.';
 let flashRequestId = null; // request id to flash in the Service Requests feed
 let notifyTimer = null;
 function showNotifyToast(title, bodyHtml, actionLabel, onAction) {
@@ -364,6 +391,10 @@ function notifyCustomerMessage(m) {
   if (customerMode || !feedReady) return false;
   if (notifiedMsgIds.has(m.id)) return false;
   notifiedMsgIds.add(m.id);
+  /* A failed-payment report is not a chat message: the owner gets the
+     failed-payment toast + activity entry instead (the message itself
+     still shows in the order's chat thread). */
+  if (m.text === PAYMENT_FAILED_TEXT) return notifyPaymentFailed(m);
   const o = state.orders.find(x => x.number === m.orderNumber);
   const t = o ? tableById(o.tableId) : null;
   const name = o ? o.customerName : 'Customer';
@@ -371,6 +402,35 @@ function notifyCustomerMessage(m) {
   showNotifyToast('New message from ' + name,
     esc(t ? t.name : '') + ' · ' + esc(m.orderNumber) + ': “' + esc(msgSnippet(m.text)) + '”',
     'Open chat', () => openOrderChat(m.orderNumber));
+  return true;
+}
+/* Payment received (customer tapped "I've Paid"): toast with the exact
+   amount, one tap to print the bill. The activity entry comes from the
+   status change itself (noteOrderRow logs "ORD-… → Paid"), so this only
+   toasts — it never logs a second entry. Returns true when the owner was
+   just told about it (the caller plays the chime once). */
+function notifyPaymentReceived(o) {
+  if (customerMode || !feedReady) return false;
+  if (notifiedPaidIds.has(o.id)) return false;
+  notifiedPaidIds.add(o.id);
+  const t = tableById(o.tableId);
+  const amount = orderPayAmount(o);
+  showNotifyToast('Payment received — ' + (t ? t.name : '') + ' · ' + fmt(amount),
+    esc(o.number) + ' · ' + esc(o.customerName || 'Customer') + ' · ' + fmt(amount),
+    'Print Bill', () => printBillForOrder(o));
+  return true;
+}
+/* Payment failed (customer tapped "Payment failed? Try again"): toast +
+   activity entry. The order stays Served — nothing is marked Paid. */
+function notifyPaymentFailed(m) {
+  if (customerMode || !feedReady) return false;
+  const o = state.orders.find(x => x.number === m.orderNumber);
+  const t = o ? tableById(o.tableId) : null;
+  logActivity('payment', 'pay-failed:' + m.orderNumber,
+    'Payment failed — ' + (t ? t.name : '') + ' · ' + m.orderNumber + ' · customer retrying');
+  showNotifyToast('Payment failed — ' + (t ? t.name : '') + ', customer retrying',
+    esc(m.orderNumber) + ' · ' + esc(o ? o.customerName : 'Customer'),
+    'View order', () => showView('orders'));
   return true;
 }
 function notifyCustomerReview(r) {
@@ -404,12 +464,12 @@ function notifyServiceRequest(q) {
     'View requests', () => openServiceRequests(q.id));
   return true;
 }
-/* Open the dashboard's Service Requests section (from a toast): switch to
-   the Dashboard view, scroll the requests feed into view, and flash the
+/* Open the Service Requests view (from a toast or an Activity entry):
+   switch to the view, scroll the requests feed into view, and flash the
    request the toast was about. */
 function openServiceRequests(requestId) {
   flashRequestId = requestId || null;
-  showView('dashboard');
+  showView('requests');
   const el = $('#requests-feed');
   if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
   if (flashRequestId) setTimeout(() => { flashRequestId = null; }, 3200);
@@ -766,7 +826,7 @@ function subscribeRealtime() {
       if (payload.eventType === 'DELETE') {
         state.orders = state.orders.filter(x => x.id !== payload.old.id);
         renderAll();
-      } else if (payload.new) { const o = noteOrderRow(payload.new); saveLocal(); renderAll(); if (payload.eventType === 'INSERT') playChime(); }
+      } else if (payload.new) { const paid = noteOrderRow(payload.new); saveLocal(); renderAll(); if (payload.eventType === 'INSERT' || paid) playChime(); }
     })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'qrdine_tables' }, (payload) => {
       if (payload.eventType === 'DELETE') {
@@ -950,7 +1010,7 @@ function playChime() {
 }
 
 /* ---------------- navigation ---------------- */
-const VIEW_TITLES = { dashboard: 'Dashboard', menu: 'Menu Management', offers: 'Offers', tables: 'Tables', orders: 'Orders', kitchen: 'Kitchen', billing: 'Billing', analytics: 'Analytics', reviews: 'Reviews', qrcodes: 'QR Codes', settings: 'Settings' };
+const VIEW_TITLES = { dashboard: 'Dashboard', requests: 'Service Requests', activity: 'Live Activity', menu: 'Menu Management', offers: 'Offers', tables: 'Tables', orders: 'Orders', kitchen: 'Kitchen', billing: 'Billing', analytics: 'Analytics', reviews: 'Reviews', qrcodes: 'QR Codes', settings: 'Settings' };
 let currentView = 'dashboard';
 function showView(name) {
   currentView = name;
@@ -960,7 +1020,7 @@ function showView(name) {
   renderView(name);
 }
 function renderView(name) {
-  ({ dashboard: renderDashboard, menu: renderMenuAdmin, offers: renderOffers, tables: renderTablesAdmin,
+  ({ dashboard: renderDashboard, requests: renderRequests, activity: renderActivityFeed, menu: renderMenuAdmin, offers: renderOffers, tables: renderTablesAdmin,
      orders: renderOrders, kitchen: renderKitchen, billing: renderBilling, analytics: renderAnalytics,
      reviews: renderReviews, qrcodes: renderQrStands, settings: renderSettings }[name] || (() => {}))();
 }
@@ -995,6 +1055,10 @@ window.addEventListener('storage', (e) => {
         chimed = true;
       } else if (feedReady && prevStatus.get(o.id) !== o.status) {
         logActivity('status', 'order-status:' + o.id + ':' + o.status, activityTextStatus(o));
+        /* The customer just paid on the other tab: toast the owner with
+           the exact amount. (An order this tab settled itself has its
+           status already Paid in prevStatus, so it never toasts here.) */
+        if (o.status === 'Paid' && notifyPaymentReceived(o)) chimed = true;
       }
     });
     state.requests.forEach(r => {
@@ -1062,16 +1126,43 @@ function renderDashboard() {
     toggleOrderChat(o.number);
   }));
   wireChatInputs($('#orders-feed'));
-
+}
+/* Service Requests — its own sidebar view now. Same feed as before (open
+   requests only, Done buttons, flash the one a toast pointed at). */
+function renderRequests() {
+  const el = $('#requests-feed');
+  if (!el) return;
   const openReqs = state.requests.filter(r => r.status === 'New').sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
-  $('#requests-feed').innerHTML = openReqs.length ? openReqs.map(r => {
+  el.innerHTML = openReqs.length ? openReqs.map(r => {
     const t = tableById(r.tableId);
     return '<div class="feed-item req-item' + (r.id === flashRequestId ? ' fresh' : '') + '"><div><strong>' + esc(r.type) + '</strong> · ' + esc(t ? t.name : '') +
       ' · <span class="muted">' + new Date(r.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) + '</span></div>' +
       '<button class="btn btn-sm btn-primary" data-req-done="' + r.id + '">Done</button></div>';
   }).join('') : '<p class="muted">No service requests waiting.</p>';
   $$('#requests-feed [data-req-done]').forEach(b => b.addEventListener('click', () => markRequestDone(b.dataset.reqDone)));
-
+}
+/* Clear All (Service Requests): mark every open request Done at once — the
+   same as pressing Done on each one. The records stay in the database as
+   history; nothing is deleted. */
+function clearAllRequests() {
+  const open = state.requests.filter(r => r.status === 'New');
+  if (!open.length) return;
+  if (!confirm('Mark all ' + open.length + ' open request' + (open.length === 1 ? '' : 's') + ' as Done?')) return;
+  open.forEach(r => {
+    r.status = 'Done'; r.doneAt = new Date().toISOString();
+    if (feedReady) logActivity('request', 'req-done:' + r.id, activityTextRequest(r, true));
+    persistRequestUpdate(r);
+  });
+  save(); renderAll();
+}
+/* Clear All (Live Activity): the feed is local-only state, so this just
+   empties it. Orders, requests and revenue are untouched. */
+function clearAllActivity() {
+  if (!(state.activity || []).length) return;
+  if (!confirm('Clear all activity? This only clears the feed shown here.')) return;
+  state.activity = [];
+  lastActivityId = null;
+  saveLocal();
   renderActivityFeed();
 }
 function highlightCard(label, value, sub) {
@@ -1306,9 +1397,10 @@ function renderOrders() {
     return '<div class="order-row"><div class="order-meta"><span class="o-no">' + esc(o.number) + '</span> · ' + esc(t ? t.name : '') +
       ' · ' + esc(o.customerName) + (o.phone ? ' · ' + esc(o.phone) : '') + '<div class="o-items">' + o.items.map(i => esc(i.name) + ' ×' + i.qty).join(', ') +
       (o.instructions ? '<br>Note: ' + esc(o.instructions) : '') + '</div></div>' +
-      '<div><span class="status ' + o.status.toLowerCase() + '">' + o.status.toUpperCase() + '</span> <strong>' + fmt(orderItemsTotal(o)) + '</strong></div>' +
+      '<div><span class="status ' + o.status.toLowerCase() + '">' + o.status.toUpperCase() + '</span>' + (o.status === 'Served' ? ' <span class="pay-pending">Payment pending</span>' : '') + ' <strong>' + fmt(orderItemsTotal(o)) + '</strong></div>' +
       '<div class="order-actions">' +
       (next ? '<button class="btn btn-sm btn-primary" data-advance="' + o.id + '">' + (next === 'Paid' ? 'Mark Paid' : '→ ' + next) + '</button>' : '') +
+      (o.status === 'Paid' ? '<button class="btn btn-sm" data-print-bill="' + o.id + '">Print Bill</button>' : '') +
       '<button class="btn btn-sm" data-chat="' + o.id + '">Message' + (unread ? ' <span class="msg-badge">' + unread + '</span>' : '') + '</button>' +
       (wa ? '<a class="btn btn-sm" href="' + wa + '" target="_blank" rel="noopener">WhatsApp</a>' : '') +
       (o.status === 'New' ? '<button class="btn btn-sm btn-danger" data-cancel="' + o.id + '">Cancel</button>' : '') +
@@ -1323,6 +1415,12 @@ function renderOrders() {
   $$('#orders-list [data-advance]').forEach(b => b.addEventListener('click', () => {
     const o = state.orders.find(x => x.id === b.dataset.advance); if (!o) return;
     advanceOrder(o); renderAll();
+  }));
+  /* Print Bill is one direct action: one click opens the receipt and
+     starts printing, with no confirmation dialog in between. */
+  $$('#orders-list [data-print-bill]').forEach(b => b.addEventListener('click', () => {
+    const o = state.orders.find(x => x.id === b.dataset.printBill); if (!o) return;
+    printBillForOrder(o);
   }));
   $$('#orders-list [data-cancel]').forEach(b => b.addEventListener('click', () => {
     const o = state.orders.find(x => x.id === b.dataset.cancel); if (!o) return;
@@ -1366,6 +1464,28 @@ function renderBilling() {
   if (billTableId && occupied.some(t => t.id === billTableId)) sel.value = billTableId;
   else billTableId = '';
   renderBillArea();
+  renderBillingPaid();
+}
+/* Paid today — orders the customer paid (or the owner settled) stay
+   visible here instead of disappearing from Billing once paid. Each row
+   shows "Payment Done" with an enabled Print Bill button, so the owner
+   can print the bill any time. Newest first. Unpaid orders above still
+   show the bill details, UPI QR, split and Print & Settle. */
+function renderBillingPaid() {
+  const el = $('#bill-paid-today');
+  if (!el) return;
+  const paid = state.orders.filter(o => o.status === 'Paid' && o.settledAt && isToday(o.settledAt))
+    .sort((a, b) => new Date(b.settledAt) - new Date(a.settledAt));
+  el.innerHTML = '<h3>Paid Today — ready to print</h3>' + (paid.length ? paid.map(o => {
+    const t = tableById(o.tableId);
+    return '<div class="feed-item"><div><strong>' + esc(o.number) + '</strong> · ' + esc(t ? t.name : '') + ' · ' + esc(o.customerName) +
+      ' · <strong>' + fmt(orderPayAmount(o)) + '</strong></div>' +
+      '<div><span class="status paid">PAYMENT DONE</span> <button class="btn btn-sm" data-bill-print="' + o.id + '">Print Bill</button></div></div>';
+  }).join('') : '<p class="muted">No paid orders today yet — bills the customer pays or you settle will appear here ready to print.</p>');
+  $$('#bill-paid-today [data-bill-print]').forEach(b => b.addEventListener('click', () => {
+    const o = state.orders.find(x => x.id === b.dataset.billPrint); if (!o) return;
+    printBillForOrder(o);
+  }));
 }
 function billLines(tableId) {
   const agg = {};
@@ -1490,6 +1610,36 @@ function printReceipt(html) {
   r.innerHTML = html;
   const qrEl = $('#receipt-qr', r);
   if (qrEl) renderQR(qrEl, upiLink(billTotals(billTableId).grand), 120);
+  document.body.classList.add('printing-receipt');
+  window.print();
+  setTimeout(() => document.body.classList.remove('printing-receipt'), 600);
+}
+/* Print Bill for ONE order (owner only — Billing view + Paid rows in
+   Orders view, and the payment-received toast). The receipt is built from
+   the order record only: items, discount line if any, and the exact amount
+   paid (finalTotal once Paid). One click, no confirmation dialog: the
+   receipt opens and printing starts at once. */
+function buildOrderReceiptHtml(o) {
+  const t = tableById(o.tableId);
+  const amount = orderPayAmount(o);
+  const when = o.settledAt || o.createdAt;
+  return '<div class="receipt"><h2>' + esc(state.settings.name.toUpperCase()) + '</h2>' +
+    '<div class="r-center">' + esc(state.settings.address) + '<br>' + esc(t ? t.name : '') + ' · ' + esc(o.number) + '<br>' + new Date(when).toLocaleString('en-IN') + '</div><hr>' +
+    '<table>' + o.items.map(it => '<tr><td>' + esc(it.name) + ' x' + it.qty + '</td><td class="num">' + fmt(it.price * it.qty) + '</td></tr>').join('') + '</table><hr>' +
+    '<table><tr><td>Subtotal</td><td class="num">' + fmt(orderItemsTotal(o)) + '</td></tr>' +
+    (o.discount ? '<tr><td>Discount (' + esc(o.offerTitle || 'offer') + ')</td><td class="num">-' + fmt(o.discount) + '</td></tr>' : '') +
+    '<tr><td><strong>Grand Total</strong></td><td class="num"><strong>' + fmt(amount) + '</strong></td></tr></table>' +
+    '<div class="r-center">Payment: ' + esc(o.paymentMode || 'UPI') + ' · PAID</div>' +
+    '<div class="r-qr" id="receipt-qr"></div>' +
+    '<div class="r-center">Thank you, visit again!</div></div>';
+}
+function printBillForOrder(o) {
+  if (!o || o.status !== 'Paid') return;
+  const amount = orderPayAmount(o);
+  const r = $('#receipt');
+  r.innerHTML = buildOrderReceiptHtml(o);
+  const qrEl = $('#receipt-qr', r);
+  if (qrEl) renderQR(qrEl, upiLink(amount), 120);
   document.body.classList.add('printing-receipt');
   window.print();
   setTimeout(() => document.body.classList.remove('printing-receipt'), 600);
@@ -1732,7 +1882,7 @@ function renderTracking() {
   const line = $('#confirm-status-line');
   if (!el) return;
   const o = state.orders.find(x => x.number === lastOrderNumber);
-  if (!o) { el.innerHTML = ''; el.hidden = true; if (cancelledEl) cancelledEl.hidden = true; renderReviewSection(); return; }
+  if (!o) { el.innerHTML = ''; el.hidden = true; if (cancelledEl) cancelledEl.hidden = true; renderPaySection(); renderReviewSection(); return; }
   if (line) {
     const st = $('#confirm-status-text');
     if (st) st.textContent = TRACK_STATUS_TEXT[o.status] || '';
@@ -1740,6 +1890,7 @@ function renderTracking() {
   if (o.status === 'Cancelled') {
     el.hidden = true; el.innerHTML = '';
     if (cancelledEl) cancelledEl.hidden = false;
+    renderPaySection();
     renderReviewSection();
     return;
   }
@@ -1759,7 +1910,80 @@ function renderTracking() {
       (t ? '<span class="track-time">' + t + '</span>' : '') + '</span>' +
       (current ? '<span class="track-now">Now</span>' : '') + '</div>';
   }).join('');
+  renderPaySection();
   renderReviewSection();
+}
+/* Pay-on-Served (customer confirmation page). The section re-renders on
+   every tracking render, so it appears the moment the order becomes
+   Served — via Realtime when online, via the cross-tab storage event in
+   offline demo mode — with no refresh. The amount is fixed text, never
+   an input: the customer cannot type or change it anywhere. */
+let payFailedOrderNo = null; // order number the customer reported a failed payment for
+let payFailedNotedFor = null; // order number the owner was already told about
+function renderPaySection() {
+  const box = $('#pay-now-section');
+  if (!box) return;
+  const o = state.orders.find(x => x.number === lastOrderNumber);
+  if (!o || (o.status !== 'Served' && o.status !== 'Paid')) { box.innerHTML = ''; return; }
+  const t = tableById(o.tableId);
+  const amount = orderPayAmount(o);
+  if (o.status === 'Paid') {
+    /* Green-tick success card — only after the customer tapped "I've
+       Paid". The review form still appears below it. */
+    box.innerHTML = '<div class="card pay-done-card">' +
+      '<div class="pay-done-tick">✓</div>' +
+      '<h3>Payment Successful</h3>' +
+      '<p><strong>' + esc(o.number) + '</strong> · ' + esc(t ? t.name : '') + '</p>' +
+      '<p class="pay-done-amount">Amount paid: <strong>' + fmt(amount) + '</strong></p>' +
+      '<p class="muted">Thank you! Your payment is received.</p></div>';
+    return;
+  }
+  /* Served: the Pay Now card. The QR carries the exact discounted grand
+     total (upiLink amount); the amount is shown as fixed text. */
+  const upi = upiLink(amount);
+  const failed = payFailedOrderNo === o.number;
+  box.innerHTML = '<div class="card ' + (failed ? 'pay-failed-card' : 'pay-card') + '">' +
+    (failed
+      ? '<div class="pay-failed-cross">✕</div><h3>Payment Failed</h3><p class="muted">Payment not received — please try again.</p>'
+      : '<h3>Pay Now</h3><p class="muted">Your food is served — scan to pay by UPI.</p>') +
+    '<p class="pay-amount">Total to pay: <strong>' + fmt(amount) + '</strong></p>' +
+    (o.discount ? '<p class="muted">Includes discount (' + esc(o.offerTitle || 'offer') + '): −' + fmt(o.discount) + '</p>' : '') +
+    '<div class="qr-box pay-qr-box"><div class="qr-img" id="pay-qr" data-upi="' + esc(upi) + '"></div>' +
+    '<div class="muted">UPI ID: <code>' + esc(state.settings.upiId) + '</code><br>Pay to: ' + esc(state.settings.name) + '<br><small>Scan to pay the exact amount — the amount is fixed in this QR.</small></div></div>' +
+    '<button class="btn btn-green btn-block" id="btn-ive-paid">I\'ve Paid</button>' +
+    '<button class="btn btn-link btn-block" id="btn-pay-failed">Payment failed? Try again</button></div>';
+  renderQR($('#pay-qr'), upi, 200);
+  $('#btn-ive-paid').addEventListener('click', confirmCustomerPayment);
+  $('#btn-pay-failed').addEventListener('click', reportPaymentFailed);
+}
+/* "I've Paid": the customer confirms they completed the UPI payment.
+   Same persist path as the owner settle — advanceOrder marks the order
+   Paid (finalTotal = items − discount, settledAt, table freed) and the
+   Realtime/storage update tells the owner's dashboard at once. */
+function confirmCustomerPayment() {
+  const o = state.orders.find(x => x.number === lastOrderNumber);
+  if (!o || o.status !== 'Served') return;
+  if (!confirm('Did you complete the UPI payment?')) return;
+  payFailedOrderNo = null;
+  o.paymentMode = 'UPI';
+  advanceOrder(o); // Served → Paid
+  renderAll();
+}
+/* "Payment failed? Try again": the app cannot see inside the customer's
+   UPI app, so a failed payment is only ever reported by the customer.
+   The order stays Served (unpaid) — the QR stays up for a retry, the
+   Billing view keeps showing its QR, and the owner is told once via a
+   chat message, which the owner side turns into the failed-payment toast
+   + activity entry. */
+function reportPaymentFailed() {
+  const o = state.orders.find(x => x.number === lastOrderNumber);
+  if (!o || o.status !== 'Served') return;
+  payFailedOrderNo = o.number;
+  if (payFailedNotedFor !== o.number) {
+    payFailedNotedFor = o.number;
+    sendMessage(o.number, 'customer', PAYMENT_FAILED_TEXT);
+  }
+  renderPaySection();
 }
 /* Fill the confirmation page for an existing order and open its tracking
    view. `dupNote` is shown only when the customer was blocked as a
@@ -2216,6 +2440,8 @@ function wireAdminEvents() {
   // any user gesture).
   document.addEventListener('pointerdown', armSound, { once: true });
   $$('#main-nav button').forEach(b => b.addEventListener('click', () => showView(b.dataset.view)));
+  $('#btn-clear-requests').addEventListener('click', clearAllRequests);
+  $('#btn-clear-activity').addEventListener('click', clearAllActivity);
   $('#btn-customer-view').addEventListener('click', () => openTablePickerFor());
   $('#picker-close').addEventListener('click', () => { $('#table-picker').hidden = true; });
   $('#table-picker').addEventListener('click', (e) => { if (e.target.id === 'table-picker') $('#table-picker').hidden = true; });

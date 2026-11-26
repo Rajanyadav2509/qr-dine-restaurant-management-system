@@ -43,7 +43,9 @@
       <span class="brand-text">Bhukhad Bachelors<small>Restaurant Manager</small></span>
     </div>
     <nav id="main-nav">
-      <button data-view="dashboard" class="active">Dashboard <span class="badge" id="requests-badge" hidden></span></button>
+      <button data-view="dashboard" class="active">Dashboard</button>
+      <button data-view="requests">Service Requests <span class="badge" id="requests-badge" hidden></span></button>
+      <button data-view="activity">Live Activity</button>
       <button data-view="menu">Menu Management</button>
       <button data-view="offers">Offers</button>
       <button data-view="tables">Tables</button>
@@ -80,26 +82,30 @@
     <section class="view active" id="view-dashboard">
       <div id="spotlight" class="spotlight" hidden></div>
       <div class="stat-row" id="dash-stats"></div>
-      <div class="dash-cols">
-        <div class="dash-side">
-          <aside class="card requests-panel">
-            <h2 class="requests-title">Service Requests</h2>
-            <div id="requests-feed" class="feed"></div>
-          </aside>
-          <aside class="card activity-panel">
-            <h2 class="activity-title"><span class="live-dot live-on"></span> Live Activity</h2>
-            <div id="activity-feed" class="feed"></div>
-          </aside>
-        </div>
-        <div class="dash-main">
-          <h2>Today's Highlights</h2>
-          <div id="dash-highlights" class="highlights"></div>
-          <h2>Tables</h2>
-          <div class="table-grid" id="table-grid"></div>
-          <h2>Incoming Orders</h2>
-          <div id="orders-feed" class="feed"></div>
-        </div>
+      <h2>Today's Highlights</h2>
+      <div id="dash-highlights" class="highlights"></div>
+      <h2>Tables</h2>
+      <div class="table-grid" id="table-grid"></div>
+      <h2>Incoming Orders</h2>
+      <div id="orders-feed" class="feed"></div>
+    </section>
+
+    <!-- SERVICE REQUESTS -->
+    <section class="view" id="view-requests">
+      <div class="row-between">
+        <h2>Service Requests</h2>
+        <button class="btn" id="btn-clear-requests">Clear All</button>
       </div>
+      <div id="requests-feed" class="feed"></div>
+    </section>
+
+    <!-- LIVE ACTIVITY -->
+    <section class="view" id="view-activity">
+      <div class="row-between">
+        <h2><span class="live-dot live-on"></span> Live Activity</h2>
+        <button class="btn" id="btn-clear-activity">Clear All</button>
+      </div>
+      <div id="activity-feed" class="feed"></div>
     </section>
 
     <!-- MENU MANAGEMENT -->
@@ -213,6 +219,7 @@
         </label>
       </div>
       <div id="bill-area"></div>
+      <div id="bill-paid-today"></div>
     </section>
 
     <!-- ANALYTICS -->
@@ -315,6 +322,7 @@
       <div class="confirm-tick">✓</div>
       <h2>Order received</h2>
       <p id="confirm-status-line">Your order <strong id="confirm-order-no"></strong> for <strong id="confirm-table"></strong> <span id="confirm-status-text"></span></p>
+      <div id="pay-now-section"></div>
       <div id="confirm-duplicate-note" class="dup-note" hidden></div>
       <div id="tracking-cancelled" class="tracking-cancelled" hidden>✕ Order cancelled — no payment is due for this order. Start a new order below if you like.</div>
       <div id="tracking-timeline" class="tracking" aria-label="Order tracking"></div>
