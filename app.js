@@ -1928,10 +1928,17 @@ function renderPaySection() {
   const t = tableById(o.tableId);
   const amount = orderPayAmount(o);
   if (o.status === 'Paid') {
-    /* Green-tick success card — only after the customer tapped "I've
+    /* Animated success badge — only after the customer tapped "I've
        Paid". The review form still appears below it. */
     box.innerHTML = '<div class="card pay-done-card">' +
-      '<div class="pay-done-tick">✓</div>' +
+      '<div class="pay-done-badge" role="img" aria-label="Payment successful">' +
+      '<svg viewBox="0 0 100 100" aria-hidden="true">' +
+      '<circle class="pay-pulse" cx="50" cy="50" r="46"/>' +
+      '<g class="pay-badge-pop">' +
+      '<path d="M100.0,50.0 L98.8,52.6 L95.6,54.8 L91.6,56.6 L88.3,58.1 L86.7,59.8 L87.2,62.1 L89.3,65.1 L91.9,68.7 L93.5,72.2 L93.3,75.0 L91.0,76.6 L87.1,77.0 L82.8,76.5 L79.1,76.2 L76.9,76.9 L76.2,79.1 L76.5,82.8 L77.0,87.1 L76.6,91.0 L75.0,93.3 L72.2,93.5 L68.7,91.9 L65.1,89.3 L62.1,87.2 L59.8,86.7 L58.1,88.3 L56.6,91.6 L54.8,95.6 L52.6,98.8 L50.0,100.0 L47.4,98.8 L45.2,95.6 L43.4,91.6 L41.9,88.3 L40.2,86.7 L37.9,87.2 L34.9,89.3 L31.3,91.9 L27.8,93.5 L25.0,93.3 L23.4,91.0 L23.0,87.1 L23.5,82.8 L23.8,79.1 L23.1,76.9 L20.9,76.2 L17.2,76.5 L12.9,77.0 L9.0,76.6 L6.7,75.0 L6.5,72.2 L8.1,68.7 L10.7,65.1 L12.8,62.1 L13.3,59.8 L11.7,58.1 L8.4,56.6 L4.4,54.8 L1.2,52.6 L0.0,50.0 L1.2,47.4 L4.4,45.2 L8.4,43.4 L11.7,41.9 L13.3,40.2 L12.8,37.9 L10.7,34.9 L8.1,31.3 L6.5,27.8 L6.7,25.0 L9.0,23.4 L12.9,23.0 L17.2,23.5 L20.9,23.8 L23.1,23.1 L23.8,20.9 L23.5,17.2 L23.0,12.9 L23.4,9.0 L25.0,6.7 L27.8,6.5 L31.3,8.1 L34.9,10.7 L37.9,12.8 L40.2,13.3 L41.9,11.7 L43.4,8.4 L45.2,4.4 L47.4,1.2 L50.0,0.0 L52.6,1.2 L54.8,4.4 L56.6,8.4 L58.1,11.7 L59.8,13.3 L62.1,12.8 L65.1,10.7 L68.7,8.1 L72.2,6.5 L75.0,6.7 L76.6,9.0 L77.0,12.9 L76.5,17.2 L76.2,20.9 L76.9,23.1 L79.1,23.8 L82.8,23.5 L87.1,23.0 L91.0,23.4 L93.3,25.0 L93.5,27.8 L91.9,31.3 L89.3,34.9 L87.2,37.9 L86.7,40.2 L88.3,41.9 L91.6,43.4 L95.6,45.2 L98.8,47.4 Z" fill="#22c55e"/>' +
+      '<circle cx="50" cy="50" r="31" fill="#86efac"/>' +
+      '<path class="pay-check" d="M37 51 L47 61 L64 42" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>' +
+      '</g></svg></div>' +
       '<h3>Payment Successful</h3>' +
       '<p><strong>' + esc(o.number) + '</strong> · ' + esc(t ? t.name : '') + '</p>' +
       '<p class="pay-done-amount">Amount paid: <strong>' + fmt(amount) + '</strong></p>' +

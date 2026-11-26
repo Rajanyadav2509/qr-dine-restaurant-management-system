@@ -475,7 +475,15 @@ code{background:#1e293b;color:#e2e8f0}
 #btn-ive-paid{margin-top:12px;padding:14px;font-size:16px}
 #btn-pay-failed{margin-top:6px}
 .pay-done-card{border-color:#16a34a}
-.pay-done-tick{width:56px;height:56px;border-radius:50%;background:var(--green-soft);color:var(--green);font-size:30px;line-height:56px;margin:0 auto 10px}
+.pay-done-badge{width:92px;height:92px;margin:0 auto 10px}
+.pay-done-badge svg{width:100%;height:100%;display:block;overflow:visible}
+.pay-badge-pop{transform-box:fill-box;transform-origin:center;animation:payBadgePop .45s cubic-bezier(.34,1.56,.64,1) both}
+.pay-check{stroke-dasharray:40;stroke-dashoffset:40;animation:payCheckDraw .45s ease-out .3s forwards}
+.pay-pulse{fill:none;stroke:#22c55e;stroke-width:2;transform-box:fill-box;transform-origin:center;animation:payPulse .9s ease-out .15s both}
+@keyframes payBadgePop{0%{transform:scale(.6);opacity:0}60%{transform:scale(1.08);opacity:1}100%{transform:scale(1);opacity:1}}
+@keyframes payCheckDraw{to{stroke-dashoffset:0}}
+@keyframes payPulse{0%{transform:scale(1);opacity:.45}100%{transform:scale(1.5);opacity:0}}
+@media (prefers-reduced-motion:reduce){.pay-badge-pop,.pay-check,.pay-pulse{animation:none}.pay-check{stroke-dashoffset:0}.pay-pulse{opacity:0}}
 .pay-done-amount{font-size:19px;margin:8px 0}
 .pay-failed-card{border-color:#dc2626}
 .pay-failed-cross{width:56px;height:56px;border-radius:50%;background:rgba(239,68,68,.14);color:#f87171;font-size:28px;line-height:56px;margin:0 auto 10px}
