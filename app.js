@@ -188,8 +188,17 @@ async function initSupabase() {
     return false;
   }
   try {
+    // Raj wants the owner login on EVERY visit: never persist the session.
+    // Clear any session saved by older versions, then create the client
+    // with in-memory-only sessions (a reload or new visit starts logged out).
+    try {
+      for (let i = localStorage.length - 1; i >= 0; i--) {
+        const k = localStorage.key(i);
+        if (k && k.indexOf('sb-') === 0 && k.slice(-11) === '-auth-token') localStorage.removeItem(k);
+      }
+    } catch (e) {}
     sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      auth: { persistSession: true, autoRefreshToken: true },
+      auth: { persistSession: false, autoRefreshToken: true },
     });
     // Lightweight probe: if the tables do not exist yet this throws and we
     // fall back to offline demo mode (the parent runs the schema next).
