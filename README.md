@@ -24,7 +24,13 @@ HTML/CSS/JS only. No build step, no framework, no account needed.
   (Available / Occupied / NEW) and each table's 3-digit PIN on its card, plus a
   live incoming-orders feed. New orders and service requests play a short
   alert chime (WebAudio — no audio file); the Sound button in the header
-  turns it off.
+  turns it off. A new order also pops a **spotlight banner** at the top, the
+  KPIs count up as values change, and a **Live Activity** feed lists every
+  event (new order, status change, service request, bill settled) with the
+  time. **Today's Highlights** show the best-selling dish, busiest table,
+  average bill and items served — all computed from today's real orders.
+  The header shows a pulsing green **LIVE** dot when the shared database is
+  connected (grey "Offline demo" when it is not).
 - **Customer QR menu** — scan a table's QR code (or open `index.html?table=1`),
   browse the menu, add dishes, and order. The order is blocked until the
   correct **Table PIN** is entered. Every dish shows a **photo**, the veg /
@@ -51,7 +57,10 @@ HTML/CSS/JS only. No build step, no framework, no account needed.
   their own share and UPI QR (the shares add up exactly to the total);
   settling still settles the whole table bill at once.
 - **Analytics** — today's revenue, orders, average bill, top-selling items and
-  table occupancy, all computed from the real stored orders.
+  table occupancy, all computed from the real stored orders. Now also an
+  **hourly orders bar chart for today** and a **Top Dishes Today** list, both
+  from today's real orders; with no orders today they show an honest empty
+  state instead of a made-up chart.
 - **QR Codes** — one printable QR stand per table. The same menu link also
   works on an **NFC card/tag** — write the link to the tag and a tap opens
   the menu; no app change is needed.

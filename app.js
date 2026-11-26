@@ -431,7 +431,7 @@ function subscribeRealtime() {
       if (payload.eventType === 'DELETE') {
         state.orders = state.orders.filter(x => x.id !== payload.old.id);
         renderAll();
-      } else if (payload.new) { applyOrderRow(payload.new); saveLocal(); renderAll(); if (payload.eventType === 'INSERT') playChime(); }
+      } else if (payload.new) { const o = noteOrderRow(payload.new); saveLocal(); renderAll(); if (payload.eventType === 'INSERT') playChime(); }
     })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'qrdine_tables' }, (payload) => {
       if (payload.eventType === 'DELETE') {
@@ -452,7 +452,7 @@ function subscribeRealtime() {
       if (payload.eventType === 'DELETE') {
         state.requests = state.requests.filter(x => x.id !== payload.old.id);
         renderAll();
-      } else if (payload.new) { applyRequestRow(payload.new); saveLocal(); renderAll(); if (payload.eventType === 'INSERT') playChime(); }
+      } else if (payload.new) { noteRequestRow(payload.new); saveLocal(); renderAll(); if (payload.eventType === 'INSERT') playChime(); }
     })
     .subscribe((status) => { updateSyncBadge(status === 'SUBSCRIBED'); });
 }
@@ -521,14 +521,15 @@ function updateSyncBadge(live) {
   const dot = $('.live-dot');
   const label = $('#sync-label');
   if (!dot || !label) return;
+  dot.classList.remove('live-on', 'live-connecting', 'live-off');
   if (online && live) {
-    dot.style.background = 'var(--green)';
+    dot.classList.add('live-on');
     label.textContent = 'Live · Shared DB';
   } else if (online) {
-    dot.style.background = 'var(--amber)';
+    dot.classList.add('live-connecting');
     label.textContent = 'Shared DB · connecting…';
   } else {
-    dot.style.background = 'var(--amber)';
+    dot.classList.add('live-off');
     label.textContent = 'Offline demo';
   }
 }
@@ -593,11 +594,30 @@ function renderAll() {
 window.addEventListener('storage', (e) => {
   // Same-browser tabs only matter in offline mode; online mode uses Realtime.
   if (!online && e.key === LS_KEY) {
-    const prevOrders = state.orders.length;
-    const prevOpenReqs = state.requests.filter(r => r.status === 'New').length;
+    const prevOrders = state.orders.slice();
+    const prevOrderIds = new Set(prevOrders.map(o => o.id));
+    const prevStatus = new Map(prevOrders.map(o => [o.id, o.status]));
+    const prevReqs = state.requests.slice();
+    const prevReqIds = new Set(prevReqs.filter(r => r.status === 'New').map(r => r.id));
+    const prevReqStatus = new Map(prevReqs.map(r => [r.id, r.status]));
     state = loadLocal(); renderAll();
-    // A new order / service request arriving from another tab chimes.
-    if (state.orders.length > prevOrders || state.requests.filter(r => r.status === 'New').length > prevOpenReqs) playChime();
+    let chimed = false;
+    state.orders.forEach(o => {
+      if (!prevOrderIds.has(o.id)) {
+        if (feedReady) { logActivity('order', 'order-new:' + o.id, activityTextOrder(o)); showSpotlight(o); }
+        playChime(); chimed = true;
+      } else if (feedReady && prevStatus.get(o.id) !== o.status) {
+        logActivity('status', 'order-status:' + o.id + ':' + o.status, activityTextStatus(o));
+      }
+    });
+    state.requests.forEach(r => {
+      if (r.status === 'New' && !prevReqIds.has(r.id)) {
+        if (feedReady) logActivity('request', 'req-new:' + r.id, activityTextRequest(r, false));
+        if (!chimed) { playChime(); chimed = true; }
+      } else if (feedReady && prevReqStatus.get(r.id) === 'New' && r.status === 'Done') {
+        logActivity('request', 'req-done:' + r.id, activityTextRequest(r, true));
+      }
+    });
   }
 });
 
@@ -608,10 +628,12 @@ function renderDashboard() {
   const revenueToday = state.orders.filter(o => o.status === 'Paid' && o.settledAt && isToday(o.settledAt))
     .reduce((s, o) => s + (o.finalTotal || 0), 0);
   $('#dash-stats').innerHTML =
-    statCard('Tables Occupied', occupied + ' / ' + state.tables.length) +
-    statCard('New Orders', String(newOrders.length)) +
-    statCard("Today's Revenue", fmt(revenueToday)) +
-    statCard('Total Orders', String(state.orders.length));
+    statCard('Tables Occupied', occupied + ' / ' + state.tables.length, occupied, 'tables', String(state.tables.length)) +
+    statCard('New Orders', String(newOrders.length), newOrders.length, 'int') +
+    statCard("Today's Revenue", fmt(revenueToday), revenueToday, 'money') +
+    statCard('Total Orders', String(state.orders.length), state.orders.length, 'int');
+  animateStatValues();
+  renderHighlights();
 
   $('#table-grid').innerHTML = state.tables.map(t => {
     const open = openOrdersFor(t.id);
@@ -648,14 +670,88 @@ function renderDashboard() {
       '<button class="btn btn-sm btn-primary" data-req-done="' + r.id + '">Done</button></div>';
   }).join('') : '<p class="muted">No service requests waiting.</p>';
   $$('#requests-feed [data-req-done]').forEach(b => b.addEventListener('click', () => markRequestDone(b.dataset.reqDone)));
+
+  const feedEl = $('#activity-feed');
+  if (feedEl) {
+    const items = (state.activity || []).slice(0, 20);
+    feedEl.innerHTML = items.length ? items.map(a => {
+      const fresh = lastActivityId === a.id && (Date.now() - new Date(a.at).getTime() < 6000);
+      return '<div class="feed-item activity-item act-' + esc(a.kind) + (fresh ? ' fresh' : '') + '"><span class="act-dot"></span><div class="grow">' + esc(a.text) + '</div><span class="muted">' + new Date(a.at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) + '</span></div>';
+    }).join('') : '<p class="muted">No activity yet — new orders, status changes and service requests will show up here live.</p>';
+  }
+}
+function highlightCard(label, value, sub) {
+  return '<div class="highlight"><div class="hl-label">' + esc(label) + '</div><div class="hl-value">' + esc(value) + '</div><div class="hl-sub">' + esc(sub) + '</div></div>';
+}
+/* Today's highlights — computed ONLY from today's real orders. */
+function renderHighlights() {
+  const el = $('#dash-highlights'); if (!el) return;
+  const today = todaysOrders();
+  if (!today.length) {
+    el.innerHTML = '<p class="muted">No orders yet today — highlights will appear here as orders come in.</p>';
+    return;
+  }
+  const dishQty = {};
+  const tableCount = {};
+  let servedItems = 0;
+  let billSum = 0;
+  today.forEach(o => {
+    o.items.forEach(it => {
+      if (!dishQty[it.id]) dishQty[it.id] = { name: it.name, qty: 0 };
+      dishQty[it.id].qty += it.qty;
+    });
+    tableCount[o.tableId] = (tableCount[o.tableId] || 0) + 1;
+    billSum += orderItemsTotal(o);
+    if (o.status === 'Served' || o.status === 'Paid') servedItems += o.items.reduce((s, it) => s + it.qty, 0);
+  });
+  const best = Object.values(dishQty).sort((a, b) => b.qty - a.qty)[0];
+  const busyEntry = Object.entries(tableCount).sort((a, b) => b[1] - a[1])[0];
+  const busyTable = tableById(busyEntry[0]);
+  const avg = Math.round(billSum / today.length);
+  el.innerHTML =
+    highlightCard('Best Seller Today', best.name, best.qty + ' sold') +
+    highlightCard('Busiest Table', busyTable ? busyTable.name : busyEntry[0], busyEntry[1] + ' order' + (busyEntry[1] === 1 ? '' : 's')) +
+    highlightCard('Average Bill', fmt(avg), today.length + ' order' + (today.length === 1 ? '' : 's') + ' today') +
+    highlightCard('Items Served', String(servedItems), 'served today');
 }
 function markRequestDone(id) {
   const r = state.requests.find(x => x.id === id); if (!r) return;
   r.status = 'Done'; r.doneAt = new Date().toISOString();
+  if (feedReady) logActivity('request', 'req-done:' + r.id, activityTextRequest(r, true));
   save(); persistRequestUpdate(r); renderAll();
 }
-function statCard(label, value) {
-  return '<div class="stat"><div class="stat-label">' + esc(label) + '</div><div class="stat-value">' + esc(value) + '</div></div>';
+function statCard(label, value, num, fmtKind, total) {
+  const attrs = (num !== undefined)
+    ? ' data-label="' + esc(label) + '" data-num="' + num + '"' + (fmtKind ? ' data-fmt="' + fmtKind + '"' : '') + (total !== undefined ? ' data-total="' + esc(total) + '"' : '')
+    : '';
+  return '<div class="stat"' + attrs + '><div class="stat-label">' + esc(label) + '</div><div class="stat-value">' + esc(value) + '</div></div>';
+}
+/* KPI count-up: when a dashboard number changes, animate from the previous
+   value to the new one over ~0.5s. First render shows instantly. */
+function animateStatValues() {
+  $$('#dash-stats .stat').forEach(el => {
+    const label = el.dataset.label;
+    const target = Number(el.dataset.num || 0);
+    const fmtKind = el.dataset.fmt || 'int';
+    const total = el.dataset.total || '';
+    const valEl = $('.stat-value', el);
+    if (!valEl || label === undefined) return;
+    const prev = prevStatNums[label];
+    if (prev === undefined || prev === target) { prevStatNums[label] = target; return; }
+    const start = prev;
+    const t0 = performance.now();
+    const dur = 500;
+    const format = (v) => fmtKind === 'money' ? fmt(Math.round(v)) : fmtKind === 'tables' ? Math.round(v) + ' / ' + total : String(Math.round(v));
+    prevStatNums[label] = target;
+    const step = (now) => {
+      const p = Math.min(1, (now - t0) / dur);
+      const eased = 1 - Math.pow(1 - p, 2);
+      valEl.textContent = format(start + (target - start) * eased);
+      if (p < 1) requestAnimationFrame(step);
+      else valEl.textContent = format(target);
+    };
+    requestAnimationFrame(step);
+  });
 }
 
 /* ---------------- menu management ---------------- */
@@ -735,8 +831,10 @@ let orderFilter = '';
 /* Advance one step along New → Preparing → Served → Paid. Shared by the
    Orders list and the Kitchen view. */
 function advanceOrder(o) {
+  const from = o.status;
   o.status = { 'New': 'Preparing', 'Preparing': 'Served', 'Served': 'Paid' }[o.status];
   if (o.status === 'Paid') { o.finalTotal = orderItemsTotal(o); o.settledAt = new Date().toISOString(); o.paymentMode = o.paymentMode || 'Cash'; }
+  if (feedReady && from !== o.status) logActivity('status', 'order-status:' + o.id + ':' + o.status, activityTextStatus(o));
   refreshTableStatus(o.tableId); save(); persistOrderUpdate(o);
 }
 function renderOrders() {
@@ -763,7 +861,7 @@ function renderOrders() {
   }));
   $$('#orders-list [data-cancel]').forEach(b => b.addEventListener('click', () => {
     const o = state.orders.find(x => x.id === b.dataset.cancel); if (!o) return;
-    if (confirm('Cancel order ' + o.number + '?')) { o.status = 'Cancelled'; refreshTableStatus(o.tableId); save(); persistOrderUpdate(o); renderAll(); }
+    if (confirm('Cancel order ' + o.number + '?')) { o.status = 'Cancelled'; if (feedReady) logActivity('status', 'order-status:' + o.id + ':Cancelled', activityTextStatus(o)); refreshTableStatus(o.tableId); save(); persistOrderUpdate(o); renderAll(); }
   }));
 }
 
@@ -925,6 +1023,7 @@ function settleBill(tableId, tot) {
   // split the final total across the table's orders, proportional to their item totals
   const sub = orders.reduce((s, o) => s + orderItemsTotal(o), 0) || 1;
   orders.forEach(o => { o.finalTotal = Math.round(orderItemsTotal(o) / sub * tot.grand); });
+  if (feedReady) logActivity('bill', 'bill:' + orders.map(o => o.id).join('+'), 'Bill settled · ' + (tableById(tableId) ? tableById(tableId).name : 'Table') + ' · ' + fmt(tot.grand) + ' (' + billPayMode + ')');
   refreshTableStatus(tableId);
   save();
   orders.forEach(o => persistOrderUpdate(o));
@@ -945,6 +1044,8 @@ function renderAnalytics() {
     statCard('Orders Today', String(ordersToday)) +
     statCard('Average Bill', fmt(avg)) +
     statCard('Occupancy', occupied + ' / ' + state.tables.length + ' tables');
+  renderHourlyChart();
+  renderTopToday();
 
   const counts = {};
   state.orders.forEach(o => o.items.forEach(it => {
@@ -976,6 +1077,39 @@ function renderAnalytics() {
     return '<div class="feed-item"><div><strong>' + esc(o.number) + '</strong> · ' + esc(t ? t.name : '') + ' · ' + esc(o.customerName) +
       '</div><div>' + esc(o.paymentMode || '') + ' · <strong>' + fmt(o.finalTotal || 0) + '</strong></div></div>';
   }).join('') : '<p class="muted">No paid orders today yet.</p>';
+}
+
+/* Hourly orders chart (today, real orders only) + top dishes today. */
+function renderHourlyChart() {
+  const el = $('#hourly-chart'); if (!el) return;
+  const today = todaysOrders();
+  if (!today.length) {
+    el.innerHTML = '<p class="muted">No orders today yet — the chart will fill in as orders come in.</p>';
+    return;
+  }
+  const hours = new Array(24).fill(0);
+  today.forEach(o => { hours[new Date(o.createdAt).getHours()]++; });
+  const max = Math.max.apply(null, hours.concat([1]));
+  el.innerHTML = '<div class="hourly-chart">' + hours.map((c, h) =>
+    '<div class="h-col" data-hour="' + h + '" data-count="' + c + '" title="' + h + ':00 — ' + c + ' order' + (c === 1 ? '' : 's') + '">' +
+    (c ? '<span class="h-val">' + c + '</span>' : '') +
+    '<div class="h-bar"><i style="height:' + Math.round(c / max * 100) + '%"></i></div>' +
+    '<span class="h-label">' + ([0, 3, 6, 9, 12, 15, 18, 21].includes(h) ? h : '') + '</span></div>'
+  ).join('') + '</div><p class="muted">Orders per hour, today · total ' + today.length + ' orders</p>';
+}
+function renderTopToday() {
+  const el = $('#top-today'); if (!el) return;
+  const today = todaysOrders();
+  const counts = {};
+  today.forEach(o => o.items.forEach(it => {
+    if (!counts[it.id]) counts[it.id] = { name: it.name, qty: 0 };
+    counts[it.id].qty += it.qty;
+  }));
+  const top = Object.values(counts).sort((a, b) => b.qty - a.qty).slice(0, 5);
+  const maxQty = top.length ? top[0].qty : 1;
+  el.innerHTML = top.length ? top.map(x =>
+    '<div class="bar-row"><span class="bar-label">' + esc(x.name) + '</span><span class="bar"><i style="width:' + Math.round(x.qty / maxQty * 100) + '%"></i></span><span class="bar-val">' + x.qty + ' sold</span></div>'
+  ).join('') : '<p class="muted">No dishes sold today yet.</p>';
 }
 
 /* ---------------- QR stands ---------------- */
@@ -1120,6 +1254,7 @@ function requestService(type, root) {
     status: 'New', createdAt: new Date().toISOString(), doneAt: null,
   };
   state.requests.push(req);
+  if (feedReady) logActivity('request', 'req-new:' + req.id, activityTextRequest(req, false));
   save();
   // If the Supabase insert fails (table not created yet) the request simply
   // stays in state/localStorage, so the flow still works in demo mode.
@@ -1151,6 +1286,7 @@ function placeOrder() {
     status: 'New', createdAt: new Date().toISOString(),
   };
   state.orders.push(order);
+  if (feedReady) logActivity('order', 'order-new:' + order.id, activityTextOrder(order));
   refreshTableStatus(customerTable.id);
   save();
   persistOrderInsert(order);
@@ -1315,6 +1451,7 @@ async function init() {
   } else {
     state = loadLocal(); deriveNextOrderNo();
   }
+  feedReady = true; // from here on, new/changed rows are live activity
   $('#loading').hidden = true;
 
   // 2. Customer view: no login, ever.
