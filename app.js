@@ -433,7 +433,7 @@ function renderQR(el, text, size) {
 
 /* ---------------- row <-> local mapping (snake_case DB, camelCase app) ---------------- */
 function rowToOrder(r) {
-  return {
+  const o = {
     id: r.id, number: r.number, tableId: r.table_id,
     items: Array.isArray(r.items) ? r.items : [],
     customerName: r.customer_name || '', phone: r.phone || '', instructions: r.notes || '',
@@ -450,6 +450,12 @@ function rowToOrder(r) {
     preparingAt: r.preparing_at || undefined,
     servedAt: r.served_at || undefined,
   };
+  /* Orders settled before the discount fix recorded the pre-discount items
+     total as finalTotal. A Paid order with a discount whose finalTotal still
+     equals the full items total was settled that way — correct it so revenue
+     counts what the customer actually paid. */
+  if (o.status === 'Paid' && o.discount > 0 && o.finalTotal != null && o.finalTotal === orderItemsTotal(o)) o.finalTotal = Math.max(0, o.finalTotal - o.discount);
+  return o;
 }
 function orderToRow(o) {
   const total = orderItemsTotal(o);
@@ -458,7 +464,7 @@ function orderToRow(o) {
     customer_name: o.customerName, phone: o.phone || null, notes: o.instructions || null,
     status: o.status, items: o.items,
     payment_mode: o.paymentMode || null,
-    subtotal: total, discount: o.discount || 0, extra: 0, grand: total,
+    subtotal: total, discount: o.discount || 0, extra: 0, grand: Math.max(0, total - (o.discount || 0)),
     final_total: o.finalTotal != null ? o.finalTotal : null,
     offer_title: o.offerTitle || null,
     created_at: o.createdAt, settled_at: o.settledAt || null,
@@ -1284,7 +1290,7 @@ function advanceOrder(o) {
   const now = new Date().toISOString();
   if (o.status === 'Preparing' && !o.preparingAt) o.preparingAt = now;
   if (o.status === 'Served' && !o.servedAt) o.servedAt = now;
-  if (o.status === 'Paid') { o.finalTotal = orderItemsTotal(o); o.settledAt = new Date().toISOString(); o.paymentMode = o.paymentMode || 'Cash'; }
+  if (o.status === 'Paid') { o.finalTotal = Math.max(0, orderItemsTotal(o) - (o.discount || 0)); o.settledAt = new Date().toISOString(); o.paymentMode = o.paymentMode || 'Cash'; }
   if (feedReady && from !== o.status) logActivity('status', 'order-status:' + o.id + ':' + o.status, activityTextStatus(o));
   refreshTableStatus(o.tableId); save(); persistOrderUpdate(o);
 }
