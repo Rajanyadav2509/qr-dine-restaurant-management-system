@@ -1,9 +1,10 @@
 /* QR Dine — restaurant QR ordering. Vanilla JS. Data in localStorage (key qrdine-v1).
-   Live across tabs via the window 'storage' event. Demo UPI ID is a placeholder. */
+   Live across tabs via the window 'storage' event. UPI payments go to the restaurant's real UPI ID. */
 'use strict';
 
 const LS_KEY = 'qrdine-v1';
-const DEMO_UPI = 'qrdine@okaxis';
+const RESTAURANT_UPI = 'yaduvanshirajan228@axl';
+const OLD_DEMO_UPI = 'qrdine@okaxis';
 
 /* ---------------- seed data ---------------- */
 function seedState() {
@@ -32,7 +33,7 @@ function seedState() {
   tables.push({ id: 't11', name: 'Lounge Room', pin: '950', type: 'room', status: 'Available' });
   return {
     v: 1,
-    settings: { name: 'Hotel Annapurna', address: 'Market, Royal Garden Park, Bokaro', upiId: DEMO_UPI, currency: '₹' },
+    settings: { name: 'Hotel Annapurna', address: 'Market, Royal Garden Park, Bokaro', upiId: RESTAURANT_UPI, currency: '₹' },
     menu, tables,
     orders: [],
     nextOrderNo: 1001,
@@ -45,6 +46,7 @@ function loadState() {
     if (!raw) { const s = seedState(); localStorage.setItem(LS_KEY, JSON.stringify(s)); return s; }
     const s = JSON.parse(raw);
     if (!s || s.v !== 1 || !Array.isArray(s.menu) || !Array.isArray(s.tables)) return seedState();
+    if (s.settings && s.settings.upiId === OLD_DEMO_UPI) { s.settings.upiId = RESTAURANT_UPI; try { localStorage.setItem(LS_KEY, JSON.stringify(s)); } catch (e) {} }
     return s;
   } catch (e) { return seedState(); }
 }
@@ -321,7 +323,7 @@ function renderBillArea() {
       ['Cash', 'UPI', 'Card'].map(m => '<label><input type="radio" name="paymode" value="' + m + '"' + (billPayMode === m ? ' checked' : '') + '> ' + m + '</label>').join('') +
     '</div>' +
     '<h3 style="margin-top:16px">Bill QR — scan to pay ' + fmt(tot.grand) + ' by UPI</h3>' +
-    '<div class="qr-box"><div class="qr-img" id="bill-qr"></div><div class="muted">UPI ID: <code>' + esc(state.settings.upiId) + '</code><br>Pay to: ' + esc(state.settings.name) + '<br><small>Demo UPI ID — replace it in Settings with the restaurant\'s real UPI ID before taking real payments.</small></div></div>' +
+    '<div class="qr-box"><div class="qr-img" id="bill-qr"></div><div class="muted">UPI ID: <code>' + esc(state.settings.upiId) + '</code><br>Pay to: ' + esc(state.settings.name) + '<br><small>Scan to pay the exact bill amount — the amount is fixed in this QR, the customer only confirms the payment.</small></div></div>' +
     '<div class="bill-actions">' +
       '<button class="btn" id="btn-bill-download">Download Bill</button>' +
       '<button class="btn" id="btn-bill-whatsapp">Send on WhatsApp</button>' +
@@ -638,7 +640,7 @@ function init() {
       e.preventDefault();
       state.settings.name = $('#sf-name').value.trim() || 'Restaurant';
       state.settings.address = $('#sf-address').value.trim();
-      state.settings.upiId = $('#sf-upi').value.trim() || DEMO_UPI;
+      state.settings.upiId = $('#sf-upi').value.trim() || RESTAURANT_UPI;
       state.settings.currency = $('#sf-currency').value.trim() || '₹';
       save(); renderAll(); alert('Settings saved.');
     });
