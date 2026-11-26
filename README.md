@@ -4,6 +4,23 @@ A fresh, working restaurant QR ordering system inspired by the QR Mitr demo vide
 Raj shared — **not** a copy of QR Mitr's code or brand. Built with vanilla
 HTML/CSS/JS only. No build step, no framework, no account needed.
 
+## Screenshots
+
+![Customer menu](qr-panel-1-menu.png)
+*Customer menu — scan a table QR, browse dishes, add to cart (Bhukhad Bachelors, Table 1).*
+
+![Cart & checkout](qr-panel-2-cart.png)
+*Cart & checkout — name and the 3-digit Table PIN from the table stand confirm the order.*
+
+![Order confirmed](qr-panel-3-confirmed.png)
+*Order confirmed — order number, items and total; the waiter brings the food to the table.*
+
+![Owner login](qr-panel-4-login.png)
+*Owner login — the dashboard is behind a Supabase Auth login. Customers never log in.*
+
+![Owner dashboard](qr-panel-5-dashboard.png)
+*Owner dashboard — tables with PINs and live status; Table 1 Occupied with a new order.*
+
 ## What it does
 
 - **Owner dashboard** — table grid (10 tables + Lounge Room) with live status
@@ -40,10 +57,15 @@ updates live on every device through Supabase Realtime — no refresh.
 
 1. **Create the tables:** Supabase Dashboard → SQL Editor → New query →
    paste `supabase-schema.sql` and Run. It creates `qrdine_tables`,
-   `qrdine_menu`, `qrdine_orders`, `qrdine_settings`, enables Row Level
+   `qrdine_menu`, `qrdine_orders`, `qrdine_settings`, grants the anon /
+   authenticated roles table access (without the GRANT block every request
+   fails with 42501 "permission denied" and the app falls back to offline
+   demo), enables Row Level
    Security (demo-grade open policies — see the comment at the top of the
    SQL file), enables Realtime on all four tables, and seeds the 16 menu
    items, 11 tables with PINs, and the Bhukhad Bachelors settings row.
+   (If you already ran an older version of the file without the GRANT
+   block, just re-run the current file — it is idempotent.)
 2. **Create the owner user:** Authentication → Users → Add user → enter the
    owner's email and a password. That is the login for the dashboard.
    (Confirm the user if email confirmation is on.)

@@ -92,6 +92,18 @@ create policy "demo: all access" on public.qrdine_orders
 create policy "demo: all access" on public.qrdine_settings
   for all to anon, authenticated using (true) with check (true);
 
+-- ---------------- Table privileges (required!) ----------------
+-- RLS policies alone do NOT grant access: the anon/authenticated roles also
+-- need table-level privileges, or every request fails with 42501
+-- "permission denied for table ..." and the app falls back to offline demo.
+-- Re-running this file is safe (GRANT is idempotent).
+
+grant usage on schema public to anon, authenticated;
+grant select, insert, update, delete on public.qrdine_tables to anon, authenticated;
+grant select, insert, update, delete on public.qrdine_menu to anon, authenticated;
+grant select, insert, update, delete on public.qrdine_orders to anon, authenticated;
+grant select, insert, update, delete on public.qrdine_settings to anon, authenticated;
+
 -- ---------------- Realtime ----------------
 -- The dashboard subscribes to these tables so every device updates live.
 
