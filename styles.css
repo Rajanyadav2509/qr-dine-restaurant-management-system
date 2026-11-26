@@ -372,7 +372,10 @@ code{background:#1e293b;color:#e2e8f0}
 
 /* ---------- dashboard two-column layout: Live Activity panel (left) ---------- */
 .dash-cols{display:grid;grid-template-columns:340px minmax(0,1fr);gap:16px;align-items:start;margin-top:14px}
+.dash-side{display:flex;flex-direction:column;gap:16px;min-width:0}
 .activity-panel{margin-bottom:0}
+.requests-panel{margin-bottom:0}
+.requests-title{margin:0 0 12px}
 .activity-title{display:flex;align-items:center;gap:8px;margin:0 0 12px}
 .dash-main>h2:first-child{margin-top:0}
 @media (max-width:900px){.dash-cols{grid-template-columns:1fr}}

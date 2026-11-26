@@ -80,10 +80,16 @@
       <div id="spotlight" class="spotlight" hidden></div>
       <div class="stat-row" id="dash-stats"></div>
       <div class="dash-cols">
-        <aside class="card activity-panel">
-          <h2 class="activity-title"><span class="live-dot live-on"></span> Live Activity</h2>
-          <div id="activity-feed" class="feed"></div>
-        </aside>
+        <div class="dash-side">
+          <aside class="card activity-panel">
+            <h2 class="activity-title"><span class="live-dot live-on"></span> Live Activity</h2>
+            <div id="activity-feed" class="feed"></div>
+          </aside>
+          <aside class="card requests-panel">
+            <h2 class="requests-title">Service Requests</h2>
+            <div id="requests-feed" class="feed"></div>
+          </aside>
+        </div>
         <div class="dash-main">
           <h2>Today's Highlights</h2>
           <div id="dash-highlights" class="highlights"></div>
@@ -91,8 +97,6 @@
           <div class="table-grid" id="table-grid"></div>
           <h2>Incoming Orders</h2>
           <div id="orders-feed" class="feed"></div>
-          <h2>Service Requests</h2>
-          <div id="requests-feed" class="feed"></div>
         </div>
       </div>
     </section>
