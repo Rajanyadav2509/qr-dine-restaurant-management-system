@@ -79,16 +79,22 @@
     <section class="view active" id="view-dashboard">
       <div id="spotlight" class="spotlight" hidden></div>
       <div class="stat-row" id="dash-stats"></div>
-      <h2>Today's Highlights</h2>
-      <div id="dash-highlights" class="highlights"></div>
-      <h2>Tables</h2>
-      <div class="table-grid" id="table-grid"></div>
-      <h2>Incoming Orders</h2>
-      <div id="orders-feed" class="feed"></div>
-      <h2>Service Requests</h2>
-      <div id="requests-feed" class="feed"></div>
-      <h2>Live Activity</h2>
-      <div id="activity-feed" class="feed"></div>
+      <div class="dash-cols">
+        <aside class="card activity-panel">
+          <h2 class="activity-title"><span class="live-dot live-on"></span> Live Activity</h2>
+          <div id="activity-feed" class="feed"></div>
+        </aside>
+        <div class="dash-main">
+          <h2>Today's Highlights</h2>
+          <div id="dash-highlights" class="highlights"></div>
+          <h2>Tables</h2>
+          <div class="table-grid" id="table-grid"></div>
+          <h2>Incoming Orders</h2>
+          <div id="orders-feed" class="feed"></div>
+          <h2>Service Requests</h2>
+          <div id="requests-feed" class="feed"></div>
+        </div>
+      </div>
     </section>
 
     <!-- MENU MANAGEMENT -->
@@ -241,9 +247,9 @@
 
   <div class="cust-body" id="cust-menu-page">
     <div id="cust-track-banner" hidden></div>
+    <div id="cust-service" class="service-row" hidden></div>
     <input id="cust-search" type="search" placeholder="Search dishes..." aria-label="Search dishes">
     <div class="cust-tabs" id="cust-tabs"></div>
-    <div id="cust-service" class="service-row" hidden></div>
     <div id="cust-items"></div>
   </div>
 

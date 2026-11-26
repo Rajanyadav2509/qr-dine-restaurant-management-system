@@ -442,7 +442,11 @@ function menuToRow(m) {
 /* Dish photo / spicy / tags presentation. A photo that fails to load hides
    itself (and its frame) so a broken-image icon never shows. */
 function dishPhotoHtml(m, cls, frameCls) {
-  if (!m.image) return '';
+  if (!m.image) {
+    /* No photo: a styled initial placeholder instead of a blank rectangle. */
+    const initial = (String(m.name || '').trim().charAt(0) || '?').toUpperCase();
+    return '<span class="' + cls + ' dish-photo-fallback" aria-hidden="true">' + esc(initial) + '</span>';
+  }
   const onErr = frameCls
     ? "this.closest('." + frameCls + "').style.display='none'"
     : 'this.remove()';
@@ -1034,8 +1038,8 @@ function renderMenuAdmin() {
   filter.value = cur;
   const list = state.menu.filter(m => !cur || m.category === cur);
   $('#menu-list').innerHTML = list.length ? list.map(m =>
-    '<div class="menu-row">' + dishPhotoHtml(m, 'menu-thumb') + '<div><span class="veg-mark' + (m.veg ? '' : ' nonveg') + '"></span>' +
-    '<span class="m-name">' + esc(m.name) + '</span>' + (m.special ? '<span class="special-tag">Chef\'s Special</span>' : '') +
+    '<div class="menu-row">' + dishPhotoHtml(m, 'menu-thumb') + '<div><div class="ci-name-row"><span class="veg-mark' + (m.veg ? '' : ' nonveg') + '"></span>' +
+    '<span class="m-name">' + esc(m.name) + '</span>' + (m.special ? '<span class="special-tag">Chef\'s Special</span>' : '') + '</div>' +
     '<div class="m-sub">' + esc(m.category) + ' · ' + fmt(m.price) + ' · ' + spicyPillHtml(m) + ' ' + tagsPillsHtml(m) + '</div></div>' +
     '<div class="order-actions"><button class="btn btn-sm" data-edit="' + m.id + '">Edit</button>' +
     '<button class="btn btn-sm btn-danger" data-del="' + m.id + '">Delete</button></div></div>'
@@ -1586,19 +1590,20 @@ function renderCustomer() {
   $$('#cust-tabs .chip').forEach(b => b.addEventListener('click', () => { custCat = b.dataset.cat; renderCustomer(); }));
   const svc = $('#cust-service');
   if (svc) {
-    if (pinUnlocked) {
-      svc.hidden = false;
-      svc.innerHTML = serviceButtonsHtml();
-      wireServiceButtons(svc);
-      if (lastServiceNote) { const note = $('.service-note', svc); if (note) { note.textContent = lastServiceNote; note.hidden = false; } }
-    } else svc.hidden = true;
+    /* Service buttons sit at the top of the menu (like the reel) — the QR
+       link already identifies the table, so no PIN is needed to call the
+       waiter or ask for water. */
+    svc.hidden = false;
+    svc.innerHTML = serviceButtonsHtml();
+    wireServiceButtons(svc);
+    if (lastServiceNote) { const note = $('.service-note', svc); if (note) { note.textContent = lastServiceNote; note.hidden = false; } }
   }
   const q = custSearch.trim().toLowerCase();
   const items = state.menu.filter(m => m.available !== false && (!custCat || m.category === custCat) && (!q || m.name.toLowerCase().includes(q)));
   $('#cust-items').innerHTML = items.length ? items.map(m => {
     const qty = cart[m.id] || 0;
     return '<div class="cust-card"><div class="cust-photo">' + dishPhotoHtml(m, 'cust-photo-img', 'cust-photo') + '</div>' +
-      '<div class="cust-info"><div><span class="veg-mark' + (m.veg ? '' : ' nonveg') + '"></span>' +
+      '<div class="cust-info"><div class="ci-name-row"><span class="veg-mark' + (m.veg ? '' : ' nonveg') + '"></span>' +
       '<span class="ci-name">' + esc(m.name) + '</span>' + (m.special ? '<span class="special-tag">Chef\'s Special</span>' : '') + '</div>' +
       '<div class="ci-price">' + esc(m.category) + ' · ' + fmt(m.price) + '</div>' +
       '<div class="ci-attrs">' + spicyPillHtml(m) + tagsPillsHtml(m) + '</div></div>' +
