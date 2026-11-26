@@ -7,10 +7,11 @@
 --   2. Paste this whole file and press Run
 --   3. Confirm the "Schema created" notice, then check Table Editor shows
 --      qrdine_tables, qrdine_menu, qrdine_orders, qrdine_settings,
---      qrdine_requests, qrdine_messages, qrdine_reviews
+--      qrdine_requests, qrdine_messages, qrdine_reviews,
+--      qrdine_offers
 --
 -- SECURITY NOTE — DEMO-GRADE POLICIES:
---   The policies below let the anon (public) key read/write all seven tables.
+--   The policies below let the anon (public) key read/write all eight tables.
 --   That is intentional for this demo: the customer menu must write orders
 --   with NO login, and the owner dashboard must read/write from any device.
 --   BEFORE real production use, tighten them: e.g. allow anon INSERT only on
@@ -70,6 +71,7 @@ create table if not exists public.qrdine_orders (
 -- times locally and retries order writes without them).
 alter table public.qrdine_orders add column if not exists preparing_at timestamptz;
 alter table public.qrdine_orders add column if not exists served_at timestamptz;
+alter table public.qrdine_orders add column if not exists offer_title text;
 
 create table if not exists public.qrdine_settings (
   id               integer primary key,
@@ -112,6 +114,23 @@ create table if not exists public.qrdine_reviews (
   created_at    timestamptz not null default now()
 );
 
+-- Owner offers (discounts shown on the customer menu). The app selects,
+-- inserts/updates/deletes and subscribes to this table; without it offers
+-- stay local-only per device (same fallback pattern as qrdine_requests).
+create table if not exists public.qrdine_offers (
+  id           uuid primary key default gen_random_uuid(),
+  title        text not null,
+  description  text not null default '',
+  type         text not null default 'percent' check (type in ('percent', 'flat')),
+  value        numeric not null default 0 check (value >= 0),
+  min_order    numeric not null default 0,
+  max_discount numeric,
+  starts_at    date,
+  ends_at      date,
+  active       boolean not null default true,
+  created_at   timestamptz not null default now()
+);
+
 create index if not exists qrdine_orders_table_id_idx   on public.qrdine_orders (table_id);
 create index if not exists qrdine_orders_status_idx     on public.qrdine_orders (status);
 create index if not exists qrdine_orders_created_at_idx on public.qrdine_orders (created_at desc);
@@ -122,6 +141,8 @@ create index if not exists qrdine_messages_order_idx    on public.qrdine_message
 create index if not exists qrdine_messages_created_at_idx on public.qrdine_messages (created_at);
 create index if not exists qrdine_reviews_order_idx    on public.qrdine_reviews (order_number);
 create index if not exists qrdine_reviews_created_at_idx on public.qrdine_reviews (created_at);
+create index if not exists qrdine_offers_active_idx    on public.qrdine_offers (active);
+create index if not exists qrdine_offers_created_at_idx on public.qrdine_offers (created_at desc);
 
 -- ---------------- Row Level Security (demo-grade open policies) ----------------
 
@@ -132,6 +153,7 @@ alter table public.qrdine_settings enable row level security;
 alter table public.qrdine_requests enable row level security;
 alter table public.qrdine_messages enable row level security;
 alter table public.qrdine_reviews enable row level security;
+alter table public.qrdine_offers enable row level security;
 
 -- Drop first so re-running this file is safe.
 drop policy if exists "demo: all access" on public.qrdine_tables;
@@ -141,6 +163,7 @@ drop policy if exists "demo: all access" on public.qrdine_settings;
 drop policy if exists "demo: all access" on public.qrdine_requests;
 drop policy if exists "demo: all access" on public.qrdine_messages;
 drop policy if exists "demo: all access" on public.qrdine_reviews;
+drop policy if exists "demo: all access" on public.qrdine_offers;
 
 create policy "demo: all access" on public.qrdine_tables
   for all to anon, authenticated using (true) with check (true);
@@ -155,6 +178,8 @@ create policy "demo: all access" on public.qrdine_requests
 create policy "demo: all access" on public.qrdine_messages
   for all to anon, authenticated using (true) with check (true);
 create policy "demo: all access" on public.qrdine_reviews
+  for all to anon, authenticated using (true) with check (true);
+create policy "demo: all access" on public.qrdine_offers
   for all to anon, authenticated using (true) with check (true);
 
 -- ---------------- Table privileges (required!) ----------------
@@ -171,6 +196,7 @@ grant select, insert, update, delete on public.qrdine_settings to anon, authenti
 grant select, insert, update, delete on public.qrdine_requests to anon, authenticated;
 grant select, insert, update, delete on public.qrdine_messages to anon, authenticated;
 grant select, insert, update, delete on public.qrdine_reviews to anon, authenticated;
+grant select, insert, update, delete on public.qrdine_offers to anon, authenticated;
 
 -- ---------------- Realtime ----------------
 -- The dashboard subscribes to these tables so every device updates live.
@@ -199,6 +225,9 @@ begin
   if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'qrdine_reviews') then
     alter publication supabase_realtime add table public.qrdine_reviews;
   end if;
+  if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'qrdine_offers') then
+    alter publication supabase_realtime add table public.qrdine_offers;
+  end if;
 end $$;
 
 -- ---------------- seed data (same as the app's local demo data) ----------------
@@ -212,51 +241,81 @@ on conflict (id) do update set
   currency = excluded.currency;
 
 insert into public.qrdine_menu (id, name, price, veg, category, special, available, image, spicy, tags) values
-  ('m1',  'Roti',                   15, true,  'Tandoor Se',      false, true, 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?auto=format&fit=crop&w=800&q=80', 'None',   ''),
-  ('m2',  'Butter Roti',            20, true,  'Tandoor Se',      false, true, 'https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?auto=format&fit=crop&w=800&q=80', 'None',   ''),
-  ('m3',  'Plain Naan',             25, true,  'Tandoor Se',      false, true, 'https://images.unsplash.com/photo-1617692855027-33b14f061079?auto=format&fit=crop&w=800&q=80', 'None',   ''),
-  ('m4',  'Butter Naan',            35, true,  'Tandoor Se',      false, true, 'https://images.unsplash.com/photo-1617692855027-33b14f061079?auto=format&fit=crop&w=800&q=80', 'None',   'Bestseller'),
-  ('m5',  'Garlic Naan',            40, true,  'Tandoor Se',      false, true, 'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=800&q=80', 'Mild',   ''),
-  ('m6',  'Tandoori Roti',          18, true,  'Tandoor Se',      false, true, 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?auto=format&fit=crop&w=800&q=80', 'None',   ''),
-  ('m7',  'Missi Roti',             30, true,  'Tandoor Se',      false, true, 'https://images.unsplash.com/photo-1626132647523-66f5bf380027?auto=format&fit=crop&w=800&q=80', 'Mild',   ''),
-  ('m8',  'Tandoori Chicken (Half)',260, false, 'Tandoor Se',      false, true, 'https://images.unsplash.com/photo-1626074353765-517a681e40be?auto=format&fit=crop&w=800&q=80', 'Medium', 'Bestseller'),
-  ('m9',  'Crispy Baby Corn Chilli',180, true,  'Chinese Special', true,  true, 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=800&q=80', 'Hot',    'Bestseller'),
-  ('m10', 'Crispy Chilli Mushroom', 200, true,  'Chinese Special', false, true, 'https://images.unsplash.com/photo-1596797038530-2c107229654b?auto=format&fit=crop&w=800&q=80', 'Hot',    ''),
-  ('m11', 'Veg Hakka Noodles',      160, true,  'Chinese Special', false, true, 'https://images.unsplash.com/photo-1585032226651-759b368d7246?auto=format&fit=crop&w=800&q=80', 'Medium', ''),
-  ('m12', 'Chilli Paneer',          190, true,  'Chinese Special', false, true, 'https://images.unsplash.com/photo-1618449840665-9ed506d73a34?auto=format&fit=crop&w=800&q=80', 'Hot',    'Bestseller'),
-  ('m13', 'Veg Fried Rice',         150, true,  'Chinese Special', false, true, 'https://images.unsplash.com/photo-1603133872878-684f208fb84b?auto=format&fit=crop&w=800&q=80', 'Mild',   ''),
-  ('m14', 'Schezwan Noodles',       170, true,  'Chinese Special', false, true, 'https://images.unsplash.com/photo-1552611052-33e04de081de?auto=format&fit=crop&w=800&q=80', 'Hot',    ''),
-  ('m15', 'Chicken Manchurian',     220, false, 'Chinese Special', false, true, 'https://images.unsplash.com/photo-1525755662778-989d0524087e?auto=format&fit=crop&w=800&q=80', 'Medium', ''),
-  ('m16', 'Chilli Chicken',         240, false, 'Chinese Special', false, true, 'https://images.unsplash.com/photo-1626082927389-6cd097cdc6ec?auto=format&fit=crop&w=800&q=80', 'Hot',    'Bestseller'),
-  ('m17', 'Veg Manchurian',         150, true,  'Starters',        false, true, 'https://images.unsplash.com/photo-1590301157890-4810ed352733?auto=format&fit=crop&w=800&q=80', 'Medium', 'Bestseller'),
-  ('m18', 'Paneer Tikka',           210, true,  'Starters',        false, true, 'https://images.unsplash.com/photo-1599487488170-d11ec9c172f0?auto=format&fit=crop&w=800&q=80', 'Medium', 'Chef''s Special'),
-  ('m19', 'Chicken 65',             220, false, 'Starters',        false, true, 'https://images.unsplash.com/photo-1569058242253-92a9c755a0ec?auto=format&fit=crop&w=800&q=80', 'Hot',    ''),
-  ('m20', 'Veg Samosa (2 pc)',      60, true,  'Starters',        false, true, 'https://images.unsplash.com/photo-1601050690117-94f5f6fa8bd7?auto=format&fit=crop&w=800&q=80', 'Mild',   ''),
-  ('m21', 'Chicken Momos (8 pc)',   160, false, 'Starters',        false, true, 'https://images.unsplash.com/photo-1496116218417-1a781b1c416c?auto=format&fit=crop&w=800&q=80', 'Mild',   'Bestseller'),
-  ('m22', 'Paneer Butter Masala',   220, true,  'Main Course',     false, true, 'https://images.unsplash.com/photo-1631452180519-c014fe946bc7?auto=format&fit=crop&w=800&q=80', 'Medium', 'Bestseller'),
-  ('m23', 'Dal Makhani',            180, true,  'Main Course',     false, true, 'https://images.unsplash.com/photo-1585937421612-70a008356fbe?auto=format&fit=crop&w=800&q=80', 'Mild',   ''),
-  ('m24', 'Butter Chicken',         280, false, 'Main Course',     false, true, 'https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?auto=format&fit=crop&w=800&q=80', 'Medium', 'Chef''s Special, Bestseller'),
-  ('m25', 'Veg Kolhapuri',          200, true,  'Main Course',     false, true, 'https://images.unsplash.com/photo-1606491956689-2ea866880c84?auto=format&fit=crop&w=800&q=80', 'Hot',    ''),
-  ('m26', 'Chicken Curry',          260, false, 'Main Course',     false, true, 'https://images.unsplash.com/photo-1598103442097-8b74394b95c6?auto=format&fit=crop&w=800&q=80', 'Medium', ''),
-  ('m27', 'Veg Biryani',            180, true,  'Rice & Biryani',  false, true, 'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?auto=format&fit=crop&w=800&q=80', 'Medium', ''),
-  ('m28', 'Chicken Biryani',        240, false, 'Rice & Biryani',  false, true, 'https://images.unsplash.com/photo-1631515243349-e0cb75fb8d3a?auto=format&fit=crop&w=800&q=80', 'Medium', 'Bestseller'),
-  ('m29', 'Jeera Rice',             140, true,  'Rice & Biryani',  false, true, 'https://images.unsplash.com/photo-1603133872878-684f208fb84b?auto=format&fit=crop&w=800&q=80', 'None',   ''),
-  ('m30', 'Mutton Biryani',         290, false, 'Rice & Biryani',  false, true, 'https://images.unsplash.com/photo-1512058564366-18510be2db19?auto=format&fit=crop&w=800&q=80', 'Hot',    'Chef''s Special'),
-  ('m31', 'Gulab Jamun (2 pc)',     60, true,  'Desserts',        false, true, 'https://images.unsplash.com/photo-1589119908995-c6837fa14848?auto=format&fit=crop&w=800&q=80', 'None',   'Bestseller'),
-  ('m32', 'Rasmalai',               90, true,  'Desserts',        false, true, 'https://images.unsplash.com/photo-1488477181946-6428a0291777?auto=format&fit=crop&w=800&q=80', 'None',   ''),
+  ('m40', 'Veg Margherita Pizza', 199, true, 'Fast Food', false, true, 'https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=800&q=80', 'Medium', 'Bestseller'),
+  ('m41', 'Veggie Supreme Pizza', 249, true, 'Fast Food', false, true, 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?auto=format&fit=crop&w=800&q=80', 'Medium', ''),
+  ('m42', 'Paneer Tikka Pizza', 269, true, 'Fast Food', false, true, 'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?auto=format&fit=crop&w=800&q=80', 'Medium', ''),
+  ('m43', 'Classic French Fries', 99, true, 'Fast Food', false, true, 'https://images.unsplash.com/photo-1573080496219-bb080dd4f877?auto=format&fit=crop&w=800&q=80', 'Mild', ''),
+  ('m44', 'Peri Peri French Fries', 119, true, 'Fast Food', false, true, 'https://images.unsplash.com/photo-1541592106381-b31e9677c0e5?auto=format&fit=crop&w=800&q=80', 'Medium', ''),
+  ('m45', 'Cheesy French Fries', 139, true, 'Fast Food', false, true, 'https://images.unsplash.com/photo-1585109649139-366815a0d713?auto=format&fit=crop&w=800&q=80', 'Mild', ''),
+  ('m46', 'Veg Burger', 99, true, 'Fast Food', false, true, 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=800&q=80', 'Mild', ''),
+  ('m47', 'Paneer Burger', 129, true, 'Fast Food', false, true, 'https://images.unsplash.com/photo-1550547660-d9450f859349?auto=format&fit=crop&w=800&q=80', 'Mild', ''),
+  ('m48', 'Veg Grilled Sandwich', 89, true, 'Fast Food', false, true, 'https://images.unsplash.com/photo-1528735602780-2552fd46c7af?auto=format&fit=crop&w=800&q=80', 'Mild', ''),
+  ('m49', 'Paneer Grilled Sandwich', 119, true, 'Fast Food', false, true, 'https://images.unsplash.com/photo-1550507992-eb63ffee0847?auto=format&fit=crop&w=800&q=80', 'Mild', ''),
+  ('m50', 'Veg Momos (8 pc)', 120, true, 'Fast Food', false, true, 'https://images.unsplash.com/photo-1496116218417-1a781b1c416c?auto=format&fit=crop&w=800&q=80', 'Mild', 'Bestseller'),
+  ('m51', 'White Sauce Pasta', 169, true, 'Fast Food', false, true, 'https://images.unsplash.com/photo-1621996346565-e3dbc646d9a9?auto=format&fit=crop&w=800&q=80', 'Mild', ''),
+  ('m17', 'Veg Manchurian', 150, true, 'Starters', false, true, 'https://images.unsplash.com/photo-1590301157890-4810ed352733?auto=format&fit=crop&w=800&q=80', 'Medium', 'Bestseller'),
+  ('m18', 'Paneer Tikka', 210, true, 'Starters', false, true, 'https://images.unsplash.com/photo-1599487488170-d11ec9c172f0?auto=format&fit=crop&w=800&q=80', 'Medium', 'Chef''s Special'),
+  ('m20', 'Veg Samosa (2 pc)', 60, true, 'Starters', false, true, 'https://images.unsplash.com/photo-1601050690117-94f5f6fa8bd7?auto=format&fit=crop&w=800&q=80', 'Mild', ''),
+  ('m1', 'Roti', 15, true, 'Tandoor Se', false, true, 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?auto=format&fit=crop&w=800&q=80', 'None', ''),
+  ('m2', 'Butter Roti', 20, true, 'Tandoor Se', false, true, 'https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?auto=format&fit=crop&w=800&q=80', 'None', ''),
+  ('m3', 'Plain Naan', 25, true, 'Tandoor Se', false, true, 'https://images.unsplash.com/photo-1617692855027-33b14f061079?auto=format&fit=crop&w=800&q=80', 'None', ''),
+  ('m4', 'Butter Naan', 35, true, 'Tandoor Se', false, true, 'https://images.unsplash.com/photo-1617692855027-33b14f061079?auto=format&fit=crop&w=800&q=80', 'None', 'Bestseller'),
+  ('m5', 'Garlic Naan', 40, true, 'Tandoor Se', false, true, 'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=800&q=80', 'Mild', ''),
+  ('m6', 'Tandoori Roti', 18, true, 'Tandoor Se', false, true, 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?auto=format&fit=crop&w=800&q=80', 'None', ''),
+  ('m7', 'Missi Roti', 30, true, 'Tandoor Se', false, true, 'https://images.unsplash.com/photo-1626132647523-66f5bf380027?auto=format&fit=crop&w=800&q=80', 'Mild', ''),
+  ('m9', 'Crispy Baby Corn Chilli', 180, true, 'Chinese Special', true, true, 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=800&q=80', 'Hot', 'Bestseller'),
+  ('m10', 'Crispy Chilli Mushroom', 200, true, 'Chinese Special', false, true, 'https://images.unsplash.com/photo-1596797038530-2c107229654b?auto=format&fit=crop&w=800&q=80', 'Hot', ''),
+  ('m11', 'Veg Hakka Noodles', 160, true, 'Chinese Special', false, true, 'https://images.unsplash.com/photo-1585032226651-759b368d7246?auto=format&fit=crop&w=800&q=80', 'Medium', ''),
+  ('m12', 'Chilli Paneer', 190, true, 'Chinese Special', false, true, 'https://images.unsplash.com/photo-1618449840665-9ed506d73a34?auto=format&fit=crop&w=800&q=80', 'Hot', 'Bestseller'),
+  ('m13', 'Veg Fried Rice', 150, true, 'Chinese Special', false, true, 'https://images.unsplash.com/photo-1603133872878-684f208fb84b?auto=format&fit=crop&w=800&q=80', 'Mild', ''),
+  ('m14', 'Schezwan Noodles', 170, true, 'Chinese Special', false, true, 'https://images.unsplash.com/photo-1552611052-33e04de081de?auto=format&fit=crop&w=800&q=80', 'Hot', ''),
+  ('m22', 'Paneer Butter Masala', 220, true, 'Main Course', false, true, 'https://images.unsplash.com/photo-1631452180519-c014fe946bc7?auto=format&fit=crop&w=800&q=80', 'Medium', 'Bestseller'),
+  ('m23', 'Dal Makhani', 180, true, 'Main Course', false, true, 'https://images.unsplash.com/photo-1585937421612-70a008356fbe?auto=format&fit=crop&w=800&q=80', 'Mild', ''),
+  ('m25', 'Veg Kolhapuri', 200, true, 'Main Course', false, true, 'https://images.unsplash.com/photo-1606491956689-2ea866880c84?auto=format&fit=crop&w=800&q=80', 'Hot', ''),
+  ('m52', 'Punjabi Thali Regular', 229, true, 'Thalis', false, true, 'https://images.unsplash.com/photo-1589301760014-d929f3979dbc?auto=format&fit=crop&w=800&q=80', 'Medium', ''),
+  ('m53', 'Punjabi Thali Deluxe', 299, true, 'Thalis', false, true, 'https://images.unsplash.com/photo-1565557623262-b51c2513a641?auto=format&fit=crop&w=800&q=80', 'Medium', 'Bestseller'),
+  ('m54', 'Punjabi Family Thali', 549, true, 'Thalis', false, true, 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?auto=format&fit=crop&w=800&q=80', 'Medium', ''),
+  ('m55', 'Gujarati Thali Regular', 199, true, 'Thalis', false, true, 'https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&w=800&q=80', 'Mild', ''),
+  ('m56', 'Gujarati Thali Deluxe', 269, true, 'Thalis', false, true, 'https://images.unsplash.com/photo-1585937421612-70a008356fbe?auto=format&fit=crop&w=800&q=80', 'Mild', ''),
+  ('m27', 'Veg Biryani', 180, true, 'Rice & Biryani', false, true, 'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?auto=format&fit=crop&w=800&q=80', 'Medium', ''),
+  ('m29', 'Jeera Rice', 140, true, 'Rice & Biryani', false, true, 'https://images.unsplash.com/photo-1603133872878-684f208fb84b?auto=format&fit=crop&w=800&q=80', 'None', ''),
+  ('m31', 'Gulab Jamun (2 pc)', 60, true, 'Desserts', false, true, 'https://images.unsplash.com/photo-1589119908995-c6837fa14848?auto=format&fit=crop&w=800&q=80', 'None', 'Bestseller'),
+  ('m32', 'Rasmalai', 90, true, 'Desserts', false, true, 'https://images.unsplash.com/photo-1488477181946-6428a0291777?auto=format&fit=crop&w=800&q=80', 'None', ''),
   ('m33', 'Chocolate Brownie with Ice Cream', 140, true, 'Desserts', false, true, 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=800&q=80', 'None', ''),
-  ('m34', 'Vanilla Ice Cream',      70, true,  'Desserts',        false, true, 'https://images.unsplash.com/photo-1560008581-09826d1de69e?auto=format&fit=crop&w=800&q=80', 'None',   ''),
-  ('m35', 'Masala Chai',            30, true,  'Drinks & Beverages', false, true, 'https://images.unsplash.com/photo-1594631252845-29fc4cc8cde9?auto=format&fit=crop&w=800&q=80', 'None', ''),
-  ('m36', 'Sweet Lassi',            60, true,  'Drinks & Beverages', false, true, 'https://images.unsplash.com/photo-1553530666-ba11a7da3888?auto=format&fit=crop&w=800&q=80', 'None',   'Bestseller'),
-  ('m37', 'Mango Lassi',            80, true,  'Drinks & Beverages', false, true, 'https://images.unsplash.com/photo-1600271886742-f049cd451bba?auto=format&fit=crop&w=800&q=80', 'None',   ''),
-  ('m38', 'Cold Coffee',            90, true,  'Drinks & Beverages', false, true, 'https://images.unsplash.com/photo-1553787499-6f9133860278?auto=format&fit=crop&w=800&q=80', 'None',   ''),
-  ('m39', 'Fresh Lime Soda',        50, true,  'Drinks & Beverages', false, true, 'https://images.unsplash.com/photo-1581636625402-29b2a704ef13?auto=format&fit=crop&w=800&q=80', 'None',   '')
--- New dishes are inserted; existing dishes keep their name/price (Raj's data)
--- and only gain the new photo/spicy/tags fields.
+  ('m34', 'Vanilla Ice Cream', 70, true, 'Ice Cream', false, true, 'https://images.unsplash.com/photo-1560008581-09826d1de69e?auto=format&fit=crop&w=800&q=80', 'None', ''),
+  ('m59', 'Chocolate Ice Cream', 80, true, 'Ice Cream', false, true, 'https://images.unsplash.com/photo-1563805042-7684c019e1cb?auto=format&fit=crop&w=800&q=80', 'None', ''),
+  ('m60', 'Butterscotch Ice Cream', 90, true, 'Ice Cream', false, true, 'https://images.unsplash.com/photo-1488900128323-21503983a07e?auto=format&fit=crop&w=800&q=80', 'None', ''),
+  ('m61', 'Mango Ice Cream', 90, true, 'Ice Cream', false, true, 'https://images.unsplash.com/photo-1497034825429-c343d7c6a68f?auto=format&fit=crop&w=800&q=80', 'None', ''),
+  ('m62', 'Kulfi', 70, true, 'Ice Cream', false, true, 'https://images.unsplash.com/photo-1501443762994-82bd5dace89a?auto=format&fit=crop&w=800&q=80', 'None', 'Bestseller'),
+  ('m35', 'Masala Chai', 30, true, 'Drinks & Beverages', false, true, 'https://images.unsplash.com/photo-1594631252845-29fc4cc8cde9?auto=format&fit=crop&w=800&q=80', 'None', ''),
+  ('m36', 'Sweet Lassi', 60, true, 'Drinks & Beverages', false, true, 'https://images.unsplash.com/photo-1553530666-ba11a7da3888?auto=format&fit=crop&w=800&q=80', 'None', 'Bestseller'),
+  ('m37', 'Mango Lassi', 80, true, 'Drinks & Beverages', false, true, 'https://images.unsplash.com/photo-1600271886742-f049cd451bba?auto=format&fit=crop&w=800&q=80', 'None', ''),
+  ('m38', 'Cold Coffee', 90, true, 'Drinks & Beverages', false, true, 'https://images.unsplash.com/photo-1553787499-6f9133860278?auto=format&fit=crop&w=800&q=80', 'None', ''),
+  ('m39', 'Fresh Lime Soda', 50, true, 'Drinks & Beverages', false, true, 'https://images.unsplash.com/photo-1581636625402-29b2a704ef13?auto=format&fit=crop&w=800&q=80', 'None', ''),
+  ('m57', 'Plain Chaach', 30, true, 'Drinks & Beverages', false, true, 'https://images.unsplash.com/photo-1626200419199-391ae4be7a41?auto=format&fit=crop&w=800&q=80', 'None', ''),
+  ('m58', 'Masala Chaach', 40, true, 'Drinks & Beverages', false, true, 'https://images.unsplash.com/photo-1553530666-ba11a7da3888?auto=format&fit=crop&w=800&q=80', 'None', ''),
+  ('m63', 'Coca-Cola', 40, true, 'Cold Drink', false, true, 'https://images.unsplash.com/photo-1554866585-cd94860890b7?auto=format&fit=crop&w=800&q=80', 'None', ''),
+  ('m64', 'Sprite', 40, true, 'Cold Drink', false, true, 'https://images.unsplash.com/photo-1629203851122-3726ecdf080e?auto=format&fit=crop&w=800&q=80', 'None', ''),
+  ('m65', 'Fanta', 40, true, 'Cold Drink', false, true, 'https://images.unsplash.com/photo-1556679343-c7306c1976bc?auto=format&fit=crop&w=800&q=80', 'None', ''),
+  ('m66', 'Pepsi', 40, true, 'Cold Drink', false, true, 'https://images.unsplash.com/photo-1581006852262-e4307cf6283a?auto=format&fit=crop&w=800&q=80', 'None', ''),
+  ('m67', 'Soda', 30, true, 'Cold Drink', false, true, 'https://images.unsplash.com/photo-1622480916113-9000ac49b79d?auto=format&fit=crop&w=800&q=80', 'None', ''),
+  ('m68', 'Mineral Water', 25, true, 'Cold Drink', false, true, 'https://images.unsplash.com/photo-1437418747212-8d9709afab22?auto=format&fit=crop&w=800&q=80', 'None', '')
 on conflict (id) do update set
   image = excluded.image,
   spicy = excluded.spicy,
   tags  = excluded.tags;
+
+-- Veg-only menu (Nov 2026): the non-veg dishes are gone from the seed above,
+-- so remove them from the live database too. Idempotent — safe to re-run.
+-- The live "Panner" dish is veg and is deliberately NOT touched here.
+delete from public.qrdine_menu
+where id in ('m8', 'm15', 'm16', 'm19', 'm21', 'm24', 'm26', 'm28', 'm30')
+   or name in ('Tandoori Chicken (Half)', 'Chicken Manchurian', 'Chilli Chicken',
+               'Chicken 65', 'Chicken Momos (8 pc)', 'Butter Chicken', 'Chicken Curry',
+               'Chicken Biryani', 'Mutton Biryani');
+
+-- Vanilla Ice Cream moved from Desserts to the new Ice Cream category.
+update public.qrdine_menu set category = 'Ice Cream' where id = 'm34';
 
 insert into public.qrdine_tables (id, name, pin, type, status) values
   ('t1',  'Table 1',     '936', 'table', 'Available'),

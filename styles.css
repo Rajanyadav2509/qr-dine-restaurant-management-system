@@ -259,8 +259,22 @@ code{background:#f1f1f1;padding:1px 5px;border-radius:4px;font-size:13px}
   .sidebar{width:100%;flex:0 0 auto;height:auto;position:static}
   #main-nav{flex-direction:row;overflow-x:auto;padding:8px}
   #main-nav button{white-space:nowrap}
-  .sidebar-foot{display:none}
+  /* sidebar foot: keep "Open Customer View" + "Sign Out" reachable on phones
+     (they were display:none, so a phone owner could never open the customer
+     view or sign out). Restaurant name/address already show in the brand. */
+  .sidebar-foot{display:flex;flex-direction:row;gap:8px;padding:10px 14px}
+  .sidebar-foot .side-rest,.sidebar-foot .side-rest-sub{display:none}
+  .sidebar-foot .btn{flex:1;width:auto;white-space:nowrap;padding:9px 8px;font-size:14px}
   .main{padding:0 14px 30px}
+  /* topbar: the clock + Sound + sync label overflowed the 360px viewport on
+     long view titles ("Menu Management" pushed docW to 366). Let the topbar
+     wrap, and drop the clock — the phone already shows the time. */
+  .topbar{flex-wrap:wrap;row-gap:8px}
+  .topbar-right{flex-wrap:wrap;row-gap:4px}
+  #clock{display:none}
+  /* small action buttons (Done, Message, Edit, Delete…) were 31px tall — too
+     small to tap reliably on a phone. Desktop is untouched. */
+  .btn-sm{padding:9px 12px;font-size:14px}
 }
 
 /* ---------- live activity feed + spotlight + highlights ---------- */
@@ -431,3 +445,25 @@ code{background:#1e293b;color:#e2e8f0}
 .review-stars-big{font-size:26px;margin:8px 0}
 .review-their-comment{font-style:italic;color:var(--ink)}
 .review-card .review-comment{font-size:15px;margin:10px 0 4px}
+
+/* ---------- offers (owner view + customer menu/cart) ---------- */
+.offers-strip{margin:4px 0 12px}
+.offers-title{font-weight:700;margin:2px 0 8px}
+.offer-card{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--line);border-left:3px solid var(--orange);border-radius:10px;padding:12px 14px;margin-bottom:8px;box-shadow:var(--shadow)}
+.offer-card .grow{flex:1;min-width:0}
+.offer-badge{background:var(--orange);color:#fff;font-weight:800;font-size:13px;border-radius:999px;padding:5px 11px;white-space:nowrap;flex:0 0 auto}
+.offer-value{color:#fb923c;font-weight:800;font-size:14px}
+.offer-row{display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:8px;box-shadow:var(--shadow);flex-wrap:wrap}
+.offer-row .grow{flex:1;min-width:200px}
+.offer-row-title{font-weight:700;font-size:15px}
+.cart-offers{margin:12px 0 4px}
+.cart-offers .offer-card{margin-bottom:8px}
+.cart-totals{margin:10px 0 4px;border-top:1px solid var(--line);padding-top:10px}
+.cart-total-row{display:flex;justify-content:space-between;align-items:center;padding:4px 2px}
+.cart-discount-row{color:var(--green);font-weight:700}
+.cart-grand-row{font-size:17px;font-weight:800;border-top:1px solid var(--line);margin-top:6px;padding-top:10px}
+.offer-note{background:rgba(245,158,11,.13);border:1px solid #92400e;color:#fcd34d;border-radius:10px;padding:10px 12px;font-weight:600;margin:10px 0 4px;font-size:14px}
+@media (max-width:760px){
+  .offer-card{flex-wrap:wrap}
+  .offer-card .btn{flex:0 0 auto}
+}

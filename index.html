@@ -45,6 +45,7 @@
     <nav id="main-nav">
       <button data-view="dashboard" class="active">Dashboard <span class="badge" id="requests-badge" hidden></span></button>
       <button data-view="menu">Menu Management</button>
+      <button data-view="offers">Offers</button>
       <button data-view="tables">Tables</button>
       <button data-view="orders">Orders <span class="badge" id="orders-badge" hidden></span></button>
       <button data-view="kitchen">Kitchen</button>
@@ -131,6 +132,36 @@
           <select id="menu-filter"><option value="">All categories</option></select>
         </div>
         <div id="menu-list"></div>
+      </div>
+    </section>
+
+    <!-- OFFERS -->
+    <section class="view" id="view-offers">
+      <h2>Offers</h2>
+      <p class="muted">Discounts the owner adds here show on the customer menu page, and the customer can apply one at checkout. A percent offer is capped at the max discount when set; the minimum order and dates are optional.</p>
+      <div class="card">
+        <h3 id="offer-form-title">Add Offer</h3>
+        <form id="offer-form" class="form-grid">
+          <label>Title * <input id="of-title" required maxlength="60" placeholder="e.g. Weekend 20% OFF"></label>
+          <label>Description <input id="of-desc" maxlength="120" placeholder="e.g. On all orders this weekend"></label>
+          <label>Type
+            <select id="of-type"><option value="percent">Percent off (%)</option><option value="flat">Flat off (₹)</option></select>
+          </label>
+          <label>Value * <input id="of-value" type="number" min="1" step="1" required placeholder="20"></label>
+          <label>Minimum order (₹) <input id="of-min" type="number" min="0" step="1" value="0" placeholder="0 = no minimum"></label>
+          <label>Max discount (₹, % offers only) <input id="of-cap" type="number" min="0" step="1" placeholder="blank = no cap"></label>
+          <label>Starts on <input id="of-start" type="date"></label>
+          <label>Ends on <input id="of-end" type="date"></label>
+          <label class="check">Active <input type="checkbox" id="of-active" checked></label>
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary" id="of-submit">Add Offer</button>
+            <button type="button" class="btn" id="of-cancel" hidden>Cancel Edit</button>
+          </div>
+        </form>
+      </div>
+      <div class="card">
+        <h3>Offers</h3>
+        <div id="offers-list"></div>
       </div>
     </section>
 
@@ -251,6 +282,7 @@
 
   <div class="cust-body" id="cust-menu-page">
     <div id="cust-track-banner" hidden></div>
+    <div id="cust-offers" class="offers-strip" hidden></div>
     <div id="cust-service" class="service-row" hidden></div>
     <input id="cust-search" type="search" placeholder="Search dishes..." aria-label="Search dishes">
     <div class="cust-tabs" id="cust-tabs"></div>
@@ -261,7 +293,13 @@
     <button class="btn btn-link" id="btn-back-menu">&larr; Back to menu</button>
     <h2>Your Cart — <span id="cart-table-label">Table 1</span></h2>
     <div id="cart-items"></div>
-    <div class="cart-total-row"><span>Total</span><strong id="cart-total">₹0</strong></div>
+    <div id="cart-offers" class="cart-offers"></div>
+    <div class="cart-totals">
+      <div class="cart-total-row"><span>Subtotal</span><strong id="cart-subtotal">₹0</strong></div>
+      <div class="cart-total-row cart-discount-row" id="cart-discount-row" hidden><span id="cart-discount-label">Discount</span><strong id="cart-discount">− ₹0</strong></div>
+      <div class="cart-total-row cart-grand-row"><span>Total</span><strong id="cart-total">₹0</strong></div>
+    </div>
+    <div id="cart-offer-note" class="offer-note" hidden></div>
     <form id="order-form" class="card form-stack">
       <label>Your Name * <input id="of-name" required maxlength="40" placeholder="e.g. Akash"></label>
       <label>Phone (optional) <input id="of-phone" type="tel" maxlength="15" placeholder="9876543210"></label>

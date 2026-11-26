@@ -24,6 +24,21 @@ const U = (id) => 'https://images.unsplash.com/' + id + '?auto=format&fit=crop&w
 /* ---------------- seed data (offline cache + reset) ---------------- */
 function seedState() {
   const menu = [
+    { id: 'm40', name: 'Veg Margherita Pizza', price: 199, veg: true, category: 'Fast Food', special: false, available: true, image: U('photo-1513104890138-7c749659a591'), spicy: 'Medium', tags: 'Bestseller' },
+    { id: 'm41', name: 'Veggie Supreme Pizza', price: 249, veg: true, category: 'Fast Food', special: false, available: true, image: U('photo-1565299624946-b28f40a0ae38'), spicy: 'Medium', tags: '' },
+    { id: 'm42', name: 'Paneer Tikka Pizza', price: 269, veg: true, category: 'Fast Food', special: false, available: true, image: U('photo-1574071318508-1cdbab80d002'), spicy: 'Medium', tags: '' },
+    { id: 'm43', name: 'Classic French Fries', price: 99, veg: true, category: 'Fast Food', special: false, available: true, image: U('photo-1573080496219-bb080dd4f877'), spicy: 'Mild', tags: '' },
+    { id: 'm44', name: 'Peri Peri French Fries', price: 119, veg: true, category: 'Fast Food', special: false, available: true, image: U('photo-1541592106381-b31e9677c0e5'), spicy: 'Medium', tags: '' },
+    { id: 'm45', name: 'Cheesy French Fries', price: 139, veg: true, category: 'Fast Food', special: false, available: true, image: U('photo-1585109649139-366815a0d713'), spicy: 'Mild', tags: '' },
+    { id: 'm46', name: 'Veg Burger', price: 99, veg: true, category: 'Fast Food', special: false, available: true, image: U('photo-1568901346375-23c9450c58cd'), spicy: 'Mild', tags: '' },
+    { id: 'm47', name: 'Paneer Burger', price: 129, veg: true, category: 'Fast Food', special: false, available: true, image: U('photo-1550547660-d9450f859349'), spicy: 'Mild', tags: '' },
+    { id: 'm48', name: 'Veg Grilled Sandwich', price: 89, veg: true, category: 'Fast Food', special: false, available: true, image: U('photo-1528735602780-2552fd46c7af'), spicy: 'Mild', tags: '' },
+    { id: 'm49', name: 'Paneer Grilled Sandwich', price: 119, veg: true, category: 'Fast Food', special: false, available: true, image: U('photo-1550507992-eb63ffee0847'), spicy: 'Mild', tags: '' },
+    { id: 'm50', name: 'Veg Momos (8 pc)', price: 120, veg: true, category: 'Fast Food', special: false, available: true, image: U('photo-1496116218417-1a781b1c416c'), spicy: 'Mild', tags: 'Bestseller' },
+    { id: 'm51', name: 'White Sauce Pasta', price: 169, veg: true, category: 'Fast Food', special: false, available: true, image: U('photo-1621996346565-e3dbc646d9a9'), spicy: 'Mild', tags: '' },
+    { id: 'm17', name: 'Veg Manchurian', price: 150, veg: true, category: 'Starters', special: false, available: true, image: U('photo-1590301157890-4810ed352733'), spicy: 'Medium', tags: 'Bestseller' },
+    { id: 'm18', name: "Paneer Tikka", price: 210, veg: true, category: 'Starters', special: false, available: true, image: U('photo-1599487488170-d11ec9c172f0'), spicy: 'Medium', tags: "Chef's Special" },
+    { id: 'm20', name: 'Veg Samosa (2 pc)', price: 60, veg: true, category: 'Starters', special: false, available: true, image: U('photo-1601050690117-94f5f6fa8bd7'), spicy: 'Mild', tags: '' },
     { id: 'm1', name: 'Roti', price: 15, veg: true, category: 'Tandoor Se', special: false, available: true, image: U('photo-1546833999-b9f581a1996d'), spicy: 'None', tags: '' },
     { id: 'm2', name: 'Butter Roti', price: 20, veg: true, category: 'Tandoor Se', special: false, available: true, image: U('photo-1626777552726-4a6b54c97e46'), spicy: 'None', tags: '' },
     { id: 'm3', name: 'Plain Naan', price: 25, veg: true, category: 'Tandoor Se', special: false, available: true, image: U('photo-1617692855027-33b14f061079'), spicy: 'None', tags: '' },
@@ -31,38 +46,43 @@ function seedState() {
     { id: 'm5', name: 'Garlic Naan', price: 40, veg: true, category: 'Tandoor Se', special: false, available: true, image: U('photo-1509440159596-0249088772ff'), spicy: 'Mild', tags: '' },
     { id: 'm6', name: 'Tandoori Roti', price: 18, veg: true, category: 'Tandoor Se', special: false, available: true, image: U('photo-1546833999-b9f581a1996d'), spicy: 'None', tags: '' },
     { id: 'm7', name: 'Missi Roti', price: 30, veg: true, category: 'Tandoor Se', special: false, available: true, image: U('photo-1626132647523-66f5bf380027'), spicy: 'Mild', tags: '' },
-    { id: 'm8', name: 'Tandoori Chicken (Half)', price: 260, veg: false, category: 'Tandoor Se', special: false, available: true, image: U('photo-1626074353765-517a681e40be'), spicy: 'Medium', tags: 'Bestseller' },
     { id: 'm9', name: 'Crispy Baby Corn Chilli', price: 180, veg: true, category: 'Chinese Special', special: true, available: true, image: U('photo-1546069901-ba9599a7e63c'), spicy: 'Hot', tags: 'Bestseller' },
     { id: 'm10', name: 'Crispy Chilli Mushroom', price: 200, veg: true, category: 'Chinese Special', special: false, available: true, image: U('photo-1596797038530-2c107229654b'), spicy: 'Hot', tags: '' },
     { id: 'm11', name: 'Veg Hakka Noodles', price: 160, veg: true, category: 'Chinese Special', special: false, available: true, image: U('photo-1585032226651-759b368d7246'), spicy: 'Medium', tags: '' },
     { id: 'm12', name: 'Chilli Paneer', price: 190, veg: true, category: 'Chinese Special', special: false, available: true, image: U('photo-1618449840665-9ed506d73a34'), spicy: 'Hot', tags: 'Bestseller' },
     { id: 'm13', name: 'Veg Fried Rice', price: 150, veg: true, category: 'Chinese Special', special: false, available: true, image: U('photo-1603133872878-684f208fb84b'), spicy: 'Mild', tags: '' },
     { id: 'm14', name: 'Schezwan Noodles', price: 170, veg: true, category: 'Chinese Special', special: false, available: true, image: U('photo-1552611052-33e04de081de'), spicy: 'Hot', tags: '' },
-    { id: 'm15', name: 'Chicken Manchurian', price: 220, veg: false, category: 'Chinese Special', special: false, available: true, image: U('photo-1525755662778-989d0524087e'), spicy: 'Medium', tags: '' },
-    { id: 'm16', name: 'Chilli Chicken', price: 240, veg: false, category: 'Chinese Special', special: false, available: true, image: U('photo-1626082927389-6cd097cdc6ec'), spicy: 'Hot', tags: 'Bestseller' },
-    { id: 'm17', name: 'Veg Manchurian', price: 150, veg: true, category: 'Starters', special: false, available: true, image: U('photo-1590301157890-4810ed352733'), spicy: 'Medium', tags: 'Bestseller' },
-    { id: 'm18', name: 'Paneer Tikka', price: 210, veg: true, category: 'Starters', special: false, available: true, image: U('photo-1599487488170-d11ec9c172f0'), spicy: 'Medium', tags: "Chef's Special" },
-    { id: 'm19', name: 'Chicken 65', price: 220, veg: false, category: 'Starters', special: false, available: true, image: U('photo-1569058242253-92a9c755a0ec'), spicy: 'Hot', tags: '' },
-    { id: 'm20', name: 'Veg Samosa (2 pc)', price: 60, veg: true, category: 'Starters', special: false, available: true, image: U('photo-1601050690117-94f5f6fa8bd7'), spicy: 'Mild', tags: '' },
-    { id: 'm21', name: 'Chicken Momos (8 pc)', price: 160, veg: false, category: 'Starters', special: false, available: true, image: U('photo-1496116218417-1a781b1c416c'), spicy: 'Mild', tags: 'Bestseller' },
     { id: 'm22', name: 'Paneer Butter Masala', price: 220, veg: true, category: 'Main Course', special: false, available: true, image: U('photo-1631452180519-c014fe946bc7'), spicy: 'Medium', tags: 'Bestseller' },
     { id: 'm23', name: 'Dal Makhani', price: 180, veg: true, category: 'Main Course', special: false, available: true, image: U('photo-1585937421612-70a008356fbe'), spicy: 'Mild', tags: '' },
-    { id: 'm24', name: 'Butter Chicken', price: 280, veg: false, category: 'Main Course', special: false, available: true, image: U('photo-1603894584373-5ac82b2ae398'), spicy: 'Medium', tags: "Chef's Special, Bestseller" },
     { id: 'm25', name: 'Veg Kolhapuri', price: 200, veg: true, category: 'Main Course', special: false, available: true, image: U('photo-1606491956689-2ea866880c84'), spicy: 'Hot', tags: '' },
-    { id: 'm26', name: 'Chicken Curry', price: 260, veg: false, category: 'Main Course', special: false, available: true, image: U('photo-1598103442097-8b74394b95c6'), spicy: 'Medium', tags: '' },
+    { id: 'm52', name: 'Punjabi Thali Regular', price: 229, veg: true, category: 'Thalis', special: false, available: true, image: U('photo-1589301760014-d929f3979dbc'), spicy: 'Medium', tags: '' },
+    { id: 'm53', name: 'Punjabi Thali Deluxe', price: 299, veg: true, category: 'Thalis', special: false, available: true, image: U('photo-1565557623262-b51c2513a641'), spicy: 'Medium', tags: 'Bestseller' },
+    { id: 'm54', name: 'Punjabi Family Thali', price: 549, veg: true, category: 'Thalis', special: false, available: true, image: U('photo-1546833999-b9f581a1996d'), spicy: 'Medium', tags: '' },
+    { id: 'm55', name: 'Gujarati Thali Regular', price: 199, veg: true, category: 'Thalis', special: false, available: true, image: U('photo-1601050690597-df0568f70950'), spicy: 'Mild', tags: '' },
+    { id: 'm56', name: 'Gujarati Thali Deluxe', price: 269, veg: true, category: 'Thalis', special: false, available: true, image: U('photo-1585937421612-70a008356fbe'), spicy: 'Mild', tags: '' },
     { id: 'm27', name: 'Veg Biryani', price: 180, veg: true, category: 'Rice & Biryani', special: false, available: true, image: U('photo-1563379091339-03b21ab4a4f8'), spicy: 'Medium', tags: '' },
-    { id: 'm28', name: 'Chicken Biryani', price: 240, veg: false, category: 'Rice & Biryani', special: false, available: true, image: U('photo-1631515243349-e0cb75fb8d3a'), spicy: 'Medium', tags: 'Bestseller' },
     { id: 'm29', name: 'Jeera Rice', price: 140, veg: true, category: 'Rice & Biryani', special: false, available: true, image: U('photo-1603133872878-684f208fb84b'), spicy: 'None', tags: '' },
-    { id: 'm30', name: 'Mutton Biryani', price: 290, veg: false, category: 'Rice & Biryani', special: false, available: true, image: U('photo-1512058564366-18510be2db19'), spicy: 'Hot', tags: "Chef's Special" },
     { id: 'm31', name: 'Gulab Jamun (2 pc)', price: 60, veg: true, category: 'Desserts', special: false, available: true, image: U('photo-1589119908995-c6837fa14848'), spicy: 'None', tags: 'Bestseller' },
     { id: 'm32', name: 'Rasmalai', price: 90, veg: true, category: 'Desserts', special: false, available: true, image: U('photo-1488477181946-6428a0291777'), spicy: 'None', tags: '' },
     { id: 'm33', name: 'Chocolate Brownie with Ice Cream', price: 140, veg: true, category: 'Desserts', special: false, available: true, image: U('photo-1578985545062-69928b1d9587'), spicy: 'None', tags: '' },
-    { id: 'm34', name: 'Vanilla Ice Cream', price: 70, veg: true, category: 'Desserts', special: false, available: true, image: U('photo-1560008581-09826d1de69e'), spicy: 'None', tags: '' },
+    { id: 'm34', name: 'Vanilla Ice Cream', price: 70, veg: true, category: 'Ice Cream', special: false, available: true, image: U('photo-1560008581-09826d1de69e'), spicy: 'None', tags: '' },
+    { id: 'm59', name: 'Chocolate Ice Cream', price: 80, veg: true, category: 'Ice Cream', special: false, available: true, image: U('photo-1563805042-7684c019e1cb'), spicy: 'None', tags: '' },
+    { id: 'm60', name: 'Butterscotch Ice Cream', price: 90, veg: true, category: 'Ice Cream', special: false, available: true, image: U('photo-1488900128323-21503983a07e'), spicy: 'None', tags: '' },
+    { id: 'm61', name: 'Mango Ice Cream', price: 90, veg: true, category: 'Ice Cream', special: false, available: true, image: U('photo-1497034825429-c343d7c6a68f'), spicy: 'None', tags: '' },
+    { id: 'm62', name: 'Kulfi', price: 70, veg: true, category: 'Ice Cream', special: false, available: true, image: U('photo-1501443762994-82bd5dace89a'), spicy: 'None', tags: 'Bestseller' },
     { id: 'm35', name: 'Masala Chai', price: 30, veg: true, category: 'Drinks & Beverages', special: false, available: true, image: U('photo-1594631252845-29fc4cc8cde9'), spicy: 'None', tags: '' },
     { id: 'm36', name: 'Sweet Lassi', price: 60, veg: true, category: 'Drinks & Beverages', special: false, available: true, image: U('photo-1553530666-ba11a7da3888'), spicy: 'None', tags: 'Bestseller' },
     { id: 'm37', name: 'Mango Lassi', price: 80, veg: true, category: 'Drinks & Beverages', special: false, available: true, image: U('photo-1600271886742-f049cd451bba'), spicy: 'None', tags: '' },
     { id: 'm38', name: 'Cold Coffee', price: 90, veg: true, category: 'Drinks & Beverages', special: false, available: true, image: U('photo-1553787499-6f9133860278'), spicy: 'None', tags: '' },
     { id: 'm39', name: 'Fresh Lime Soda', price: 50, veg: true, category: 'Drinks & Beverages', special: false, available: true, image: U('photo-1581636625402-29b2a704ef13'), spicy: 'None', tags: '' },
+    { id: 'm57', name: 'Plain Chaach', price: 30, veg: true, category: 'Drinks & Beverages', special: false, available: true, image: U('photo-1626200419199-391ae4be7a41'), spicy: 'None', tags: '' },
+    { id: 'm58', name: 'Masala Chaach', price: 40, veg: true, category: 'Drinks & Beverages', special: false, available: true, image: U('photo-1553530666-ba11a7da3888'), spicy: 'None', tags: '' },
+    { id: 'm63', name: 'Coca-Cola', price: 40, veg: true, category: 'Cold Drink', special: false, available: true, image: U('photo-1554866585-cd94860890b7'), spicy: 'None', tags: '' },
+    { id: 'm64', name: 'Sprite', price: 40, veg: true, category: 'Cold Drink', special: false, available: true, image: U('photo-1629203851122-3726ecdf080e'), spicy: 'None', tags: '' },
+    { id: 'm65', name: 'Fanta', price: 40, veg: true, category: 'Cold Drink', special: false, available: true, image: U('photo-1556679343-c7306c1976bc'), spicy: 'None', tags: '' },
+    { id: 'm66', name: 'Pepsi', price: 40, veg: true, category: 'Cold Drink', special: false, available: true, image: U('photo-1581006852262-e4307cf6283a'), spicy: 'None', tags: '' },
+    { id: 'm67', name: 'Soda', price: 30, veg: true, category: 'Cold Drink', special: false, available: true, image: U('photo-1622480916113-9000ac49b79d'), spicy: 'None', tags: '' },
+    { id: 'm68', name: 'Mineral Water', price: 25, veg: true, category: 'Cold Drink', special: false, available: true, image: U('photo-1437418747212-8d9709afab22'), spicy: 'None', tags: '' },
   ];
   const tables = [];
   for (let i = 1; i <= 10; i++) {
@@ -77,6 +97,7 @@ function seedState() {
     requests: [],
     messages: [], // owner ↔ customer in-app chat, per order number
     reviews: [],  // customer reviews, one per order number (after bill settled)
+    offers: [],   // owner offers (discounts) shown on the customer menu
     msgSeen: {},  // order number -> ISO time the owner last opened its chat
     activity: [], // live activity feed — session history, local only (no DB table)
     nextOrderNo: 1001,
@@ -94,6 +115,7 @@ function loadLocal() {
     if (!Array.isArray(s.requests)) s.requests = [];
     if (!Array.isArray(s.messages)) s.messages = [];
     if (!Array.isArray(s.reviews)) s.reviews = [];
+    if (!Array.isArray(s.offers)) s.offers = [];
     if (!s.msgSeen || typeof s.msgSeen !== 'object') s.msgSeen = {};
     if (!Array.isArray(s.activity)) s.activity = [];
     s.menu.forEach(m => {
@@ -144,10 +166,17 @@ function refreshTableStatus(tableId) {
   const next = openOrdersFor(tableId).length ? 'Occupied' : 'Available';
   if (t.status !== next) { t.status = next; persistTable(t); }
 }
+/* Menu category order on the customer page: Fast Food first, then the rest.
+   Fixed order (not first-seen in the data) so the tabs stay in this order
+   whether the menu came from the local seed or from Supabase (which orders
+   by id). A category the owner adds later appears after these, in
+   first-seen order. */
+const CATEGORY_ORDER = ['Fast Food', 'Starters', 'Tandoor Se', 'Chinese Special', 'Main Course', 'Thalis', 'Rice & Biryani', 'Desserts', 'Ice Cream', 'Drinks & Beverages', 'Cold Drink'];
 function categories() {
-  const cats = [];
-  state.menu.forEach(m => { if (!cats.includes(m.category)) cats.push(m.category); });
-  return cats;
+  const present = new Set(state.menu.map(m => m.category));
+  const ordered = CATEGORY_ORDER.filter(c => present.has(c));
+  state.menu.forEach(m => { if (!ordered.includes(m.category)) ordered.push(m.category); });
+  return ordered;
 }
 function upiLink(amount) {
   const p = new URLSearchParams({ pa: state.settings.upiId, pn: state.settings.name, am: String(Math.max(0, Math.round(amount))), cu: 'INR' });
@@ -412,6 +441,9 @@ function rowToOrder(r) {
     paymentMode: r.payment_mode || undefined,
     finalTotal: r.final_total != null ? Number(r.final_total) : undefined,
     settledAt: r.settled_at || undefined,
+    /* Offer applied at checkout (discount already computed then). */
+    discount: Number(r.discount || 0),
+    offerTitle: r.offer_title || '',
     /* Tracking timestamps — added by a later schema migration. Rows written
        before the columns exist have no value here; callers keep any locally
        observed time instead (see applyOrderRow / loadFromSupabase). */
@@ -426,8 +458,9 @@ function orderToRow(o) {
     customer_name: o.customerName, phone: o.phone || null, notes: o.instructions || null,
     status: o.status, items: o.items,
     payment_mode: o.paymentMode || null,
-    subtotal: total, discount: 0, extra: 0, grand: total,
+    subtotal: total, discount: o.discount || 0, extra: 0, grand: total,
     final_total: o.finalTotal != null ? o.finalTotal : null,
+    offer_title: o.offerTitle || null,
     created_at: o.createdAt, settled_at: o.settledAt || null,
     preparing_at: o.preparingAt || null, served_at: o.servedAt || null,
   };
@@ -489,6 +522,67 @@ function rowToReview(r) {
 }
 function reviewToRow(r) {
   return { id: r.id, order_number: r.orderNumber, table_id: r.tableId, customer_name: r.customerName || null, rating: r.rating, comment: r.comment || null, created_at: r.createdAt };
+}
+/* Owner offers (discounts). Dates are plain YYYY-MM-DD strings, so validity
+   is compared as strings against today's local date — no timezone math. */
+function rowToOffer(r) {
+  return {
+    id: r.id, title: r.title || '', description: r.description || '',
+    type: r.type === 'flat' ? 'flat' : 'percent',
+    value: Number(r.value || 0), minOrder: Number(r.min_order || 0),
+    maxDiscount: r.max_discount != null ? Number(r.max_discount) : null,
+    startsAt: r.starts_at || null, endsAt: r.ends_at || null,
+    active: r.active !== false, createdAt: r.created_at,
+  };
+}
+function offerToRow(o) {
+  return {
+    id: o.id, title: o.title, description: o.description || '',
+    type: o.type, value: o.value, min_order: o.minOrder || 0,
+    max_discount: o.maxDiscount != null ? o.maxDiscount : null,
+    starts_at: o.startsAt || null, ends_at: o.endsAt || null,
+    active: !!o.active, created_at: o.createdAt,
+  };
+}
+function todayStr() { return new Date().toLocaleDateString('en-CA'); } // YYYY-MM-DD, local
+/* An offer is usable only when it is active, today is inside its date
+   window (when set), and the subtotal reaches its minimum order. */
+function offerApplies(offer, subtotal) {
+  if (!offer || !offer.active) return false;
+  const today = todayStr();
+  if (offer.startsAt && today < offer.startsAt) return false;
+  if (offer.endsAt && today > offer.endsAt) return false;
+  if (subtotal < (offer.minOrder || 0)) return false;
+  return true;
+}
+/* Discount amount for a subtotal. Percent is capped at maxDiscount when set;
+   the discount never exceeds the subtotal itself. */
+function offerDiscount(offer, subtotal) {
+  if (!offerApplies(offer, subtotal)) return 0;
+  let d = offer.type === 'percent'
+    ? Math.round(subtotal * (offer.value || 0) / 100)
+    : (offer.value || 0);
+  if (offer.type === 'percent' && offer.maxDiscount != null) d = Math.min(d, offer.maxDiscount);
+  return Math.min(d, subtotal);
+}
+function offerValueText(offer) {
+  return offer.type === 'percent' ? offer.value + '% OFF' : '₹' + offer.value + ' OFF';
+}
+function offerValidityText(offer) {
+  const parts = [];
+  if (offer.startsAt || offer.endsAt) {
+    const f = (d) => { try { return new Date(d + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }); } catch (e) { return d; } };
+    parts.push('Valid ' + (offer.startsAt ? f(offer.startsAt) : 'now') + ' – ' + (offer.endsAt ? f(offer.endsAt) : 'open'));
+  }
+  if (offer.minOrder) parts.push('Min order ' + fmt(offer.minOrder));
+  return parts.join(' · ');
+}
+/* Offers the customer can see on the menu page: active and inside their
+   date window (the minimum-order check happens at apply time, in the cart). */
+function activeOffers() {
+  const today = todayStr();
+  return (state.offers || []).filter(o => o.active &&
+    (!o.startsAt || today >= o.startsAt) && (!o.endsAt || today <= o.endsAt));
 }
 function reviewFor(number) {
   return (state.reviews || []).find(r => r.orderNumber === number) || null;
@@ -565,7 +659,7 @@ async function initSupabase() {
 }
 
 async function loadFromSupabase() {
-  const [sRes, mRes, tRes, oRes, qRes, gRes, vRes] = await Promise.all([
+  const [sRes, mRes, tRes, oRes, qRes, gRes, vRes, fRes] = await Promise.all([
     sb.from('qrdine_settings').select('*').eq('id', 1).maybeSingle(),
     sb.from('qrdine_menu').select('*').order('id'),
     sb.from('qrdine_tables').select('*').order('id'),
@@ -573,6 +667,7 @@ async function loadFromSupabase() {
     sb.from('qrdine_requests').select('*').order('created_at', { ascending: true }).limit(500),
     sb.from('qrdine_messages').select('*').order('created_at', { ascending: true }).limit(500),
     sb.from('qrdine_reviews').select('*').order('created_at', { ascending: false }).limit(500),
+    sb.from('qrdine_offers').select('*').order('created_at', { ascending: false }).limit(500),
   ]);
   if (sRes.error) throw sRes.error;
   if (mRes.error) throw mRes.error;
@@ -599,6 +694,9 @@ async function loadFromSupabase() {
   // Same for the reviews table.
   if (vRes.error) console.warn('QR Dine: qrdine_reviews not available yet — reviews stay local.', vRes.error.message);
   else state.reviews = (vRes.data || []).map(rowToReview);
+  // Same for the offers table.
+  if (fRes.error) console.warn('QR Dine: qrdine_offers not available yet — offers stay local.', fRes.error.message);
+  else state.offers = (fRes.data || []).map(rowToOffer);
   deriveNextOrderNo();
   saveLocal();
 }
@@ -648,6 +746,12 @@ function applyReviewRow(r) {
   const i = state.reviews.findIndex(x => x.id === v.id);
   if (i >= 0) state.reviews[i] = v; else state.reviews.push(v);
 }
+function applyOfferRow(r) {
+  const o = rowToOffer(r);
+  if (!Array.isArray(state.offers)) state.offers = [];
+  const i = state.offers.findIndex(x => x.id === o.id);
+  if (i >= 0) state.offers[i] = o; else state.offers.push(o);
+}
 function subscribeRealtime() {
   if (!sb || liveSubscribed) return;
   liveSubscribed = true;
@@ -691,6 +795,12 @@ function subscribeRealtime() {
         renderAll();
       } else if (payload.new) { const fresh = noteReviewRow(payload.new); saveLocal(); renderAll(); if (fresh) playChime(); }
     })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'qrdine_offers' }, (payload) => {
+      if (payload.eventType === 'DELETE') {
+        state.offers = (state.offers || []).filter(x => x.id !== payload.old.id);
+        saveLocal(); renderAll();
+      } else if (payload.new) { applyOfferRow(payload.new); saveLocal(); renderAll(); }
+    })
     .subscribe((status) => { updateSyncBadge(status === 'SUBSCRIBED'); });
 }
 
@@ -705,7 +815,7 @@ function sbSafe(fn) {
 }
 function stripTrackingCols(row) {
   const r = Object.assign({}, row);
-  delete r.preparing_at; delete r.served_at;
+  delete r.preparing_at; delete r.served_at; delete r.offer_title;
   return r;
 }
 /* If the tracking columns do not exist in Supabase yet, an insert/update
@@ -713,14 +823,14 @@ function stripTrackingCols(row) {
    the order/status change itself still saves (times stay local only). */
 async function persistOrderInsert(o) {
   const res = await sbSafe(() => sb.from('qrdine_orders').insert(orderToRow(o)));
-  if (res && res.error && /preparing_at|served_at/.test(res.error.message || '')) {
+  if (res && res.error && /preparing_at|served_at|offer_title/.test(res.error.message || '')) {
     await sbSafe(() => sb.from('qrdine_orders').insert(stripTrackingCols(orderToRow(o))));
   }
   return res;
 }
 async function persistOrderUpdate(o) {
   const res = await sbSafe(() => sb.from('qrdine_orders').update(orderToRow(o)).eq('id', o.id));
-  if (res && res.error && /preparing_at|served_at/.test(res.error.message || '')) {
+  if (res && res.error && /preparing_at|served_at|offer_title/.test(res.error.message || '')) {
     await sbSafe(() => sb.from('qrdine_orders').update(stripTrackingCols(orderToRow(o))).eq('id', o.id));
   }
   return res;
@@ -743,6 +853,11 @@ function persistMessageInsert(m) { return sbSafe(() => sb.from('qrdine_messages'
 /* Customer reviews: same fallback — if the table does not exist yet, the
    review stays in state/localStorage and still shows as submitted. */
 function persistReviewInsert(r) { return sbSafe(() => sb.from('qrdine_reviews').insert(reviewToRow(r))); }
+/* Owner offers: same fallback — if the table does not exist yet, the offer
+   stays in state/localStorage and still shows on the customer menu. */
+function persistOfferInsert(o) { return sbSafe(() => sb.from('qrdine_offers').insert(offerToRow(o))); }
+function persistOfferUpdate(o) { return sbSafe(() => sb.from('qrdine_offers').update(offerToRow(o)).eq('id', o.id)); }
+function persistOfferDelete(id) { return sbSafe(() => sb.from('qrdine_offers').delete().eq('id', id)); }
 async function persistResetDemo() {
   if (!online || !sb) return;
   const seed = seedState();
@@ -829,7 +944,7 @@ function playChime() {
 }
 
 /* ---------------- navigation ---------------- */
-const VIEW_TITLES = { dashboard: 'Dashboard', menu: 'Menu Management', tables: 'Tables', orders: 'Orders', kitchen: 'Kitchen', billing: 'Billing', analytics: 'Analytics', reviews: 'Reviews', qrcodes: 'QR Codes', settings: 'Settings' };
+const VIEW_TITLES = { dashboard: 'Dashboard', menu: 'Menu Management', offers: 'Offers', tables: 'Tables', orders: 'Orders', kitchen: 'Kitchen', billing: 'Billing', analytics: 'Analytics', reviews: 'Reviews', qrcodes: 'QR Codes', settings: 'Settings' };
 let currentView = 'dashboard';
 function showView(name) {
   currentView = name;
@@ -839,7 +954,7 @@ function showView(name) {
   renderView(name);
 }
 function renderView(name) {
-  ({ dashboard: renderDashboard, menu: renderMenuAdmin, tables: renderTablesAdmin,
+  ({ dashboard: renderDashboard, menu: renderMenuAdmin, offers: renderOffers, tables: renderTablesAdmin,
      orders: renderOrders, kitchen: renderKitchen, billing: renderBilling, analytics: renderAnalytics,
      reviews: renderReviews, qrcodes: renderQrStands, settings: renderSettings }[name] || (() => {}))();
 }
@@ -1073,6 +1188,66 @@ function resetMenuForm() {
   $('#mf-cancel').hidden = true;
 }
 
+/* ---------------- offers (owner) ----------------
+   The owner creates discounts here; active ones appear on the customer
+   menu page and can be applied in the cart. Percent offers are capped at
+   maxDiscount when set; a minimum order and a date window are optional. */
+let editingOfferId = null;
+function renderOffers() {
+  const list = (state.offers || []).slice().sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  const el = $('#offers-list');
+  if (!el) return;
+  el.innerHTML = list.length ? list.map(o => {
+    const valid = offerValidityText(o);
+    const val = offerValueText(o);
+    const badge = o.title.toLowerCase().includes(val.toLowerCase()) ? '' : ' <span class="offer-value">' + esc(val) + '</span>';
+    return '<div class="offer-row"><div class="grow"><div class="offer-row-title">' + esc(o.title) + badge + '</div>' +
+      (o.description ? '<div class="muted">' + esc(o.description) + '</div>' : '') +
+      '<div class="muted">' + (valid ? esc(valid) + ' · ' : '') + '<span class="status ' + (o.active ? 'available' : 'occupied') + '">' + (o.active ? 'ACTIVE' : 'INACTIVE') + '</span></div></div>' +
+      '<div class="order-actions">' +
+      '<button class="btn btn-sm" data-offer-edit="' + o.id + '">Edit</button>' +
+      '<button class="btn btn-sm" data-offer-toggle="' + o.id + '">' + (o.active ? 'Deactivate' : 'Activate') + '</button>' +
+      '<button class="btn btn-sm btn-danger" data-offer-del="' + o.id + '">Delete</button></div></div>';
+  }).join('') : '<p class="muted">No offers yet — add one above and it will show on the customer menu.</p>';
+  $$('#offers-list [data-offer-edit]').forEach(b => b.addEventListener('click', () => startOfferEdit(b.dataset.offerEdit)));
+  $$('#offers-list [data-offer-toggle]').forEach(b => b.addEventListener('click', () => {
+    const o = (state.offers || []).find(x => x.id === b.dataset.offerToggle); if (!o) return;
+    o.active = !o.active;
+    save(); persistOfferUpdate(o); renderOffers();
+  }));
+  $$('#offers-list [data-offer-del]').forEach(b => b.addEventListener('click', () => {
+    const o = (state.offers || []).find(x => x.id === b.dataset.offerDel);
+    if (o && confirm('Delete offer "' + o.title + '"?')) {
+      state.offers = (state.offers || []).filter(x => x.id !== o.id);
+      save(); persistOfferDelete(o.id); renderOffers();
+    }
+  }));
+}
+function startOfferEdit(id) {
+  const o = (state.offers || []).find(x => x.id === id); if (!o) return;
+  editingOfferId = id;
+  $('#of-title').value = o.title;
+  $('#of-desc').value = o.description || '';
+  $('#of-type').value = o.type;
+  $('#of-value').value = o.value;
+  $('#of-min').value = o.minOrder || 0;
+  $('#of-cap').value = o.maxDiscount != null ? o.maxDiscount : '';
+  $('#of-start').value = o.startsAt || '';
+  $('#of-end').value = o.endsAt || '';
+  $('#of-active').checked = !!o.active;
+  $('#offer-form-title').textContent = 'Edit Offer';
+  $('#of-submit').textContent = 'Save Changes';
+  $('#of-cancel').hidden = false;
+  $('#of-title').focus();
+}
+function resetOfferForm() {
+  editingOfferId = null;
+  $('#offer-form').reset(); $('#of-type').value = 'percent'; $('#of-active').checked = true;
+  $('#offer-form-title').textContent = 'Add Offer';
+  $('#of-submit').textContent = 'Add Offer';
+  $('#of-cancel').hidden = true;
+}
+
 /* ---------------- tables admin ---------------- */
 function renderTablesAdmin() {
   $('#tables-list').innerHTML = state.tables.map(t => {
@@ -1195,13 +1370,28 @@ function billLines(tableId) {
   }));
   return Object.values(agg);
 }
+/* Bill totals for a table. The discount has two parts: the offer discounts
+   already applied to the table's open orders at checkout (one line per
+   offer title), plus the owner's manual discount on this screen. The UPI
+   QR and the split-bill shares both use the discounted grand total. */
 function billTotals(tableId) {
   const sub = billLines(tableId).reduce((s, l) => s + l.price * l.qty, 0);
-  const disc = billDiscount.mode === 'percent'
+  const byTitle = {};
+  openOrdersFor(tableId).forEach(o => {
+    const d = o.discount || 0;
+    if (d > 0) {
+      const t = o.offerTitle || 'Offer';
+      byTitle[t] = (byTitle[t] || 0) + d;
+    }
+  });
+  const offerLines = Object.entries(byTitle).map(([title, amount]) => ({ title, amount }));
+  const offerDisc = offerLines.reduce((s, l) => s + l.amount, 0);
+  const manualDisc = billDiscount.mode === 'percent'
     ? Math.min(sub, Math.round(sub * (billDiscount.value || 0) / 100))
     : Math.min(sub, billDiscount.value || 0);
+  const disc = Math.min(sub, offerDisc + manualDisc);
   const grand = Math.max(0, sub - disc + (billExtra || 0));
-  return { sub, disc, extra: billExtra || 0, grand };
+  return { sub, disc, offerDisc, offerLines, manualDisc, extra: billExtra || 0, grand };
 }
 function renderBillArea() {
   const area = $('#bill-area');
@@ -1221,7 +1411,8 @@ function renderBillArea() {
     '</div>' +
     '<table class="bill-table">' +
       '<tr><td>Subtotal</td><td class="num">' + fmt(tot.sub) + '</td></tr>' +
-      '<tr><td>Discount</td><td class="num">− ' + fmt(tot.disc) + '</td></tr>' +
+      tot.offerLines.map(l => '<tr><td>Discount (' + esc(l.title) + ')</td><td class="num">− ' + fmt(l.amount) + '</td></tr>').join('') +
+      '<tr><td>Discount</td><td class="num">− ' + fmt(tot.manualDisc) + '</td></tr>' +
       '<tr><td>Extra charges</td><td class="num">+ ' + fmt(tot.extra) + '</td></tr>' +
       '<tr><td class="bill-total">Grand Total</td><td class="num bill-total">' + fmt(tot.grand) + '</td></tr>' +
     '</table>' +
@@ -1266,7 +1457,9 @@ function buildBillText(tableId, tot) {
   const t = tableById(tableId);
   const lines = billLines(tableId).map(l => l.name + ' x' + l.qty + ' — ' + fmt(l.price * l.qty)).join('\n');
   return state.settings.name + '\n' + state.settings.address + '\n' + (t ? t.name : '') + '\n----------------\n' +
-    lines + '\n----------------\nSubtotal: ' + fmt(tot.sub) + '\nDiscount: -' + fmt(tot.disc) +
+    lines + '\n----------------\nSubtotal: ' + fmt(tot.sub) +
+    tot.offerLines.map(l => '\nDiscount (' + l.title + '): -' + fmt(l.amount)).join('') +
+    '\nDiscount: -' + fmt(tot.manualDisc) +
     '\nExtra: +' + fmt(tot.extra) + '\nGrand Total: ' + fmt(tot.grand) + '\nPayment: ' + billPayMode +
     '\nThank you, visit again!';
 }
@@ -1278,7 +1471,8 @@ function buildReceiptHtml(tableId, tot, copyLabel) {
     '<div class="r-center">' + esc(state.settings.address) + '<br>' + esc(t ? t.name : '') + ' · ' + new Date().toLocaleString('en-IN') + '</div><hr>' +
     '<table>' + lines + '</table><hr>' +
     '<table><tr><td>Subtotal</td><td class="num">' + fmt(tot.sub) + '</td></tr>' +
-    '<tr><td>Discount</td><td class="num">-' + fmt(tot.disc) + '</td></tr>' +
+    tot.offerLines.map(l => '<tr><td>Discount (' + esc(l.title) + ')</td><td class="num">-' + fmt(l.amount) + '</td></tr>').join('') +
+    '<tr><td>Discount</td><td class="num">-' + fmt(tot.manualDisc) + '</td></tr>' +
     '<tr><td>Extra charges</td><td class="num">' + fmt(tot.extra) + '</td></tr>' +
     '<tr><td><strong>Grand Total</strong></td><td class="num"><strong>' + fmt(tot.grand) + '</strong></td></tr></table>' +
     '<div class="r-center">Payment: ' + esc(billPayMode) + ' · ' + esc(copyLabel || '') + '</div>' +
@@ -1480,6 +1674,25 @@ function cartCount() { return Object.values(cart).reduce((s, q) => s + q, 0); }
 function cartTotal() {
   return Object.entries(cart).reduce((s, [id, q]) => { const m = itemById(id); return s + (m ? m.price * q : 0); }, 0);
 }
+/* ---------------- customer offers ----------------
+   The customer applies ONE offer in the cart. The applied offer is
+   re-checked on every render: if items were removed and the subtotal fell
+   below the offer's minimum order (or the offer was deactivated), it is
+   removed and a short note is shown. */
+let appliedOfferId = null;
+let offerRemovedNote = '';
+function currentAppliedOffer() { return (state.offers || []).find(o => o.id === appliedOfferId) || null; }
+function validateAppliedOffer() {
+  const o = currentAppliedOffer();
+  if (!o) return;
+  if (!offerApplies(o, cartTotal())) {
+    appliedOfferId = null;
+    offerRemovedNote = 'Offer "' + o.title + '" removed — ' +
+      (!o.active ? 'it is no longer active.' : 'your order total is below the minimum of ' + fmt(o.minOrder || 0) + '.');
+  }
+}
+function cartDiscount() { const o = currentAppliedOffer(); return o ? offerDiscount(o, cartTotal()) : 0; }
+function cartGrandTotal() { return Math.max(0, cartTotal() - cartDiscount()); }
 /* ---------------- live order tracking (customer) ----------------
    Timeline: Order placed → Preparing → Served → Bill settled.
    Times are real only: placed = createdAt, preparing = preparingAt,
@@ -1550,7 +1763,8 @@ function showTrackingFor(o, dupNote) {
   const t = tableById(o.tableId);
   $('#confirm-order-no').textContent = o.number;
   $('#confirm-table').textContent = t ? t.name : '';
-  $('#confirm-summary').textContent = o.items.map(i => i.name + ' ×' + i.qty).join(', ') + ' — Total ' + fmt(orderItemsTotal(o));
+  $('#confirm-summary').textContent = o.items.map(i => i.name + ' ×' + i.qty).join(', ') + ' — Total ' + fmt(orderItemsTotal(o)) +
+    (o.discount ? ' (Discount ' + (o.offerTitle || 'offer') + ': −' + fmt(o.discount) + ')' : '');
   const note = $('#confirm-duplicate-note');
   if (note) { if (dupNote) { note.textContent = dupNote; note.hidden = false; } else note.hidden = true; }
   const cs = $('#confirm-service');
@@ -1588,6 +1802,19 @@ function renderCustomer() {
   $('#cust-tabs').innerHTML = '<button class="chip' + (custCat === '' ? ' active' : '') + '" data-cat="">All</button>' +
     cats.map(c => '<button class="chip' + (custCat === c ? ' active' : '') + '" data-cat="' + esc(c) + '">' + esc(c) + '</button>').join('');
   $$('#cust-tabs .chip').forEach(b => b.addEventListener('click', () => { custCat = b.dataset.cat; renderCustomer(); }));
+  const offersEl = $('#cust-offers');
+  if (offersEl) {
+    const offers = activeOffers();
+    if (offers.length) {
+      offersEl.hidden = false;
+      offersEl.innerHTML = '<div class="offers-title">Today\'s Offers</div>' + offers.map(o => {
+        const valid = offerValidityText(o);
+        return '<div class="offer-card"><span class="offer-badge">' + esc(offerValueText(o)) + '</span><div class="grow"><strong>' + esc(o.title) + '</strong>' +
+          (o.description ? '<div class="muted">' + esc(o.description) + '</div>' : '') +
+          (valid ? '<div class="muted">' + esc(valid) + '</div>' : '') + '</div></div>';
+      }).join('');
+    } else { offersEl.hidden = true; offersEl.innerHTML = ''; }
+  }
   const svc = $('#cust-service');
   if (svc) {
     /* Service buttons sit at the top of the menu (like the reel) — the QR
@@ -1621,7 +1848,7 @@ function renderCustomer() {
   }));
   const n = cartCount();
   $('#cust-cartbar').hidden = n === 0;
-  $('#cartbar-text').textContent = n + ' item' + (n === 1 ? '' : 's') + ' · ' + fmt(cartTotal());
+  $('#cartbar-text').textContent = n + ' item' + (n === 1 ? '' : 's') + ' · ' + fmt(cartGrandTotal());
   renderCartPage();
   renderConfirmChat();
   renderTracking();
@@ -1640,6 +1867,7 @@ function renderCustomer() {
   }
 }
 function renderCartPage() {
+  validateAppliedOffer();
   const entries = Object.entries(cart);
   $('#cart-items').innerHTML = entries.length ? entries.map(([id, qty]) => {
     const m = itemById(id); if (!m) return '';
@@ -1654,7 +1882,49 @@ function renderCartPage() {
     if (cart[b.dataset.cdec] <= 0) delete cart[b.dataset.cdec];
     renderCustomer();
   }));
-  $('#cart-total').textContent = fmt(cartTotal());
+  /* Offers: the customer can apply ONE. An offer whose minimum order is
+     above the current subtotal shows why it cannot be applied yet. */
+  const offersBox = $('#cart-offers');
+  if (offersBox) {
+    const subtotal = cartTotal();
+    const offers = activeOffers();
+    const applied = currentAppliedOffer();
+    offersBox.innerHTML = offers.length ? '<div class="offers-title">Apply an offer</div>' + offers.map(o => {
+      const ok = subtotal >= (o.minOrder || 0);
+      const isApplied = applied && applied.id === o.id;
+      const valid = offerValidityText(o);
+      return '<div class="offer-card"><span class="offer-badge">' + esc(offerValueText(o)) + '</span><div class="grow"><strong>' + esc(o.title) + '</strong>' +
+        (valid ? '<div class="muted">' + esc(valid) + '</div>' : '') +
+        (!ok && !isApplied ? '<div class="muted">Add ' + fmt((o.minOrder || 0) - subtotal) + ' more to use this offer</div>' : '') + '</div>' +
+        (isApplied
+          ? '<button class="btn btn-sm btn-primary" data-offer-remove="' + o.id + '">Applied ✓</button>'
+          : '<button class="btn btn-sm" data-offer-apply="' + o.id + '"' + (ok ? '' : ' disabled') + '>Apply</button>') + '</div>';
+    }).join('') : '';
+    $$('#cart-offers [data-offer-apply]').forEach(b => b.addEventListener('click', () => {
+      appliedOfferId = b.dataset.offerApply; offerRemovedNote = ''; renderCustomer();
+    }));
+    $$('#cart-offers [data-offer-remove]').forEach(b => b.addEventListener('click', () => {
+      appliedOfferId = null; offerRemovedNote = ''; renderCustomer();
+    }));
+  }
+  const noteEl = $('#cart-offer-note');
+  if (noteEl) {
+    if (offerRemovedNote) { noteEl.textContent = offerRemovedNote; noteEl.hidden = false; offerRemovedNote = ''; }
+    else noteEl.hidden = true;
+  }
+  const subEl = $('#cart-subtotal');
+  if (subEl) subEl.textContent = fmt(cartTotal());
+  const discRow = $('#cart-discount-row');
+  const discEl = $('#cart-discount');
+  const applied = currentAppliedOffer();
+  if (discRow && discEl) {
+    if (applied && cartDiscount() > 0) {
+      $('#cart-discount-label').textContent = 'Discount (' + applied.title + ')';
+      discEl.textContent = '− ' + fmt(cartDiscount());
+      discRow.hidden = false;
+    } else discRow.hidden = true;
+  }
+  $('#cart-total').textContent = fmt(cartGrandTotal());
 }
 function showCustPage(which) {
   $('#cust-menu-page').hidden = which !== 'menu';
@@ -1859,10 +2129,17 @@ function placeOrder() {
   const dup = findOpenDuplicateOrder(name, phone);
   if (dup) {
     cart = {};
+    appliedOfferId = null; offerRemovedNote = '';
     showTrackingFor(dup, 'This name and mobile already have an open order — showing your existing order ' + dup.number + ' (' + dup.status + ').');
     renderCustomer();
     return;
   }
+  /* The applied offer is re-validated at checkout and stored on the order,
+     so the bill shows "Discount (offer title)" even if the offer is later
+     deactivated or deleted. */
+  validateAppliedOffer();
+  const offer = currentAppliedOffer();
+  const offerDiscountAmt = offer ? offerDiscount(offer, cartTotal()) : 0;
   const items = Object.entries(cart).map(([id, qty]) => {
     const m = itemById(id);
     return { id, name: m.name, price: m.price, qty };
@@ -1871,6 +2148,7 @@ function placeOrder() {
     id: online ? newUuid() : uid('o'), number: 'ORD-' + (state.nextOrderNo++), tableId: customerTable.id,
     items, customerName: name, phone, instructions: notes,
     status: 'New', createdAt: new Date().toISOString(),
+    discount: offerDiscountAmt, offerTitle: offer ? offer.title : '',
   };
   state.orders.push(order);
   if (feedReady) logActivity('order', 'order-new:' + order.id, activityTextOrder(order));
@@ -1878,6 +2156,7 @@ function placeOrder() {
   save();
   persistOrderInsert(order);
   cart = {};
+  appliedOfferId = null; offerRemovedNote = '';
   showTrackingFor(order);
   renderCustomer();
 }
@@ -1911,7 +2190,7 @@ function wireCustomerEvents() {
   $('#confirm-chat-input').addEventListener('keydown', (e) => {
     if (e.key === 'Enter') { e.preventDefault(); $('#btn-confirm-chat-send').click(); }
   });
-  $('#btn-new-order').addEventListener('click', () => { cart = {}; renderCustomer(); showCustPage('menu'); });
+  $('#btn-new-order').addEventListener('click', () => { cart = {}; appliedOfferId = null; offerRemovedNote = ''; renderCustomer(); showCustPage('menu'); });
   $('#btn-back-admin').addEventListener('click', () => { location.href = location.pathname; });
 }
 function wireAdminEvents() {
@@ -1957,6 +2236,34 @@ function wireAdminEvents() {
   });
   $('#mf-cancel').addEventListener('click', resetMenuForm);
   $('#menu-filter').addEventListener('change', renderMenuAdmin);
+  $('#offer-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const title = $('#of-title').value.trim();
+    const type = $('#of-type').value;
+    let value = Math.max(0, Number($('#of-value').value) || 0);
+    if (type === 'percent') value = Math.min(100, value);
+    const minOrder = Math.max(0, Number($('#of-min').value) || 0);
+    const capRaw = $('#of-cap').value.trim();
+    const maxDiscount = capRaw === '' ? null : Math.max(0, Number(capRaw) || 0);
+    const startsAt = $('#of-start').value || null;
+    const endsAt = $('#of-end').value || null;
+    const active = $('#of-active').checked;
+    if (!title || !value) return;
+    if (startsAt && endsAt && endsAt < startsAt) { alert('End date cannot be before the start date.'); return; }
+    const description = $('#of-desc').value.trim();
+    if (editingOfferId) {
+      const o = (state.offers || []).find(x => x.id === editingOfferId);
+      Object.assign(o, { title, description, type, value, minOrder, maxDiscount, startsAt, endsAt, active });
+      save(); persistOfferUpdate(o);
+    } else {
+      const o = { id: online ? newUuid() : uid('f'), title, description, type, value, minOrder, maxDiscount, startsAt, endsAt, active, createdAt: new Date().toISOString() };
+      if (!Array.isArray(state.offers)) state.offers = [];
+      state.offers.push(o);
+      save(); persistOfferInsert(o);
+    }
+    resetOfferForm(); renderOffers();
+  });
+  $('#of-cancel').addEventListener('click', resetOfferForm);
   $('#table-form').addEventListener('submit', (e) => {
     e.preventDefault();
     const name = $('#tf-name').value.trim();
