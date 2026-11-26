@@ -229,6 +229,7 @@
   </header>
 
   <div class="cust-body" id="cust-menu-page">
+    <div id="cust-track-banner" hidden></div>
     <input id="cust-search" type="search" placeholder="Search dishes..." aria-label="Search dishes">
     <div class="cust-tabs" id="cust-tabs"></div>
     <div id="cust-service" class="service-row" hidden></div>
@@ -258,6 +259,14 @@
       <p class="muted" id="confirm-summary"></p>
       <p class="muted">The waiter will bring it to your table.</p>
       <div id="confirm-service" class="service-row"></div>
+      <div class="card chat-box" id="confirm-chat">
+        <h3>Message the restaurant</h3>
+        <div class="chat-list" id="confirm-chat-list"></div>
+        <div class="chat-input-row">
+          <input id="confirm-chat-input" maxlength="300" placeholder="Type a message…">
+          <button class="btn btn-primary" id="btn-confirm-chat-send">Send</button>
+        </div>
+      </div>
       <button class="btn btn-primary btn-block" id="btn-new-order">Order More</button>
       <button class="btn btn-outline btn-block" id="btn-back-admin">Back to Dashboard</button>
     </div>
@@ -265,7 +274,7 @@
 
   <div class="cust-cartbar" id="cust-cartbar" hidden>
     <span id="cartbar-text">0 items</span>
-    <button class="btn btn-primary" id="btn-view-cart">View Cart</button>
+    <button class="btn btn-red" id="btn-view-cart">View Order</button>
   </div>
 </div>
 

@@ -41,7 +41,11 @@ HTML/CSS/JS only. No build step, no framework, no account needed.
   any dish's photo, spicy level or tags from Menu Management.
 - **Orders** — live list, statuses New → Preparing → Served → Paid.
   Orders with a phone number get a **WhatsApp** button that opens a chat
-  to the customer with the order number and status prefilled.
+  to the customer with the order number and status prefilled. Every order
+  also has a **Message** button that opens a real-time **in-app chat** with
+  the customer (new table `qrdine_messages`); the customer replies from the
+  order-confirmation page, and the owner sees a badge on the order when a
+  new customer message arrives.
 - **Kitchen** — New and Preparing orders as big cards with items and
   quantities; one big button moves an order to the next stage
   (New → Preparing → Served).
@@ -66,6 +70,10 @@ HTML/CSS/JS only. No build step, no framework, no account needed.
   the menu; no app change is needed.
 - **Settings** — restaurant name, address, UPI ID, currency. **Reset demo data**
   restores the original demo.
+- **Dark theme** — the whole app (customer menu, dashboard, login) is dark
+  blue/black with a single orange/red accent and a green Print & Settle
+  button, matching the Xtrudeo reel's look. The cart button is red and reads
+  "View Order". QR codes keep a white background so scanners can read them.
 
 ## Shared database (Supabase) — live on all devices
 

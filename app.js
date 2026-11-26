@@ -75,6 +75,8 @@ function seedState() {
     menu, tables,
     orders: [],
     requests: [],
+    messages: [], // owner ↔ customer in-app chat, per order number
+    msgSeen: {},  // order number -> ISO time the owner last opened its chat
     activity: [], // live activity feed — session history, local only (no DB table)
     nextOrderNo: 1001,
   };
@@ -89,6 +91,8 @@ function loadLocal() {
     if (!s || s.v !== 1 || !Array.isArray(s.menu) || !Array.isArray(s.tables)) return seedState();
     if (s.settings && s.settings.upiId === OLD_DEMO_UPI) { s.settings.upiId = RESTAURANT_UPI; try { localStorage.setItem(LS_KEY, JSON.stringify(s)); } catch (e) {} }
     if (!Array.isArray(s.requests)) s.requests = [];
+    if (!Array.isArray(s.messages)) s.messages = [];
+    if (!s.msgSeen || typeof s.msgSeen !== 'object') s.msgSeen = {};
     if (!Array.isArray(s.activity)) s.activity = [];
     s.menu.forEach(m => {
       if (m.available === undefined) m.available = true;
@@ -320,6 +324,23 @@ function rowToRequest(r) {
 function requestToRow(r) {
   return { id: r.id, table_id: r.tableId, type: r.type, status: r.status, created_at: r.createdAt, done_at: r.doneAt || null };
 }
+/* In-app chat messages (owner ↔ customer), keyed by order number. */
+function rowToMessage(r) {
+  return { id: r.id, orderNumber: r.order_number, tableId: r.table_id, sender: r.sender, text: r.text, createdAt: r.created_at };
+}
+function messageToRow(m) {
+  return { id: m.id, order_number: m.orderNumber, table_id: m.tableId, sender: m.sender, text: m.text, created_at: m.createdAt };
+}
+function messagesFor(number) {
+  return (state.messages || []).filter(m => m.orderNumber === number)
+    .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+}
+/* Customer messages the owner has not opened yet (per order). */
+function unreadMsgCount(number) {
+  const seen = (state.msgSeen && state.msgSeen[number]) || '';
+  return (state.messages || []).filter(m => m.orderNumber === number && m.sender === 'customer' &&
+    (!seen || new Date(m.createdAt) > new Date(seen))).length;
+}
 function settingsToRow() {
   return { id: 1, restaurant_name: state.settings.name, address: state.settings.address, upi_id: state.settings.upiId, currency: state.settings.currency };
 }
@@ -376,12 +397,13 @@ async function initSupabase() {
 }
 
 async function loadFromSupabase() {
-  const [sRes, mRes, tRes, oRes, qRes] = await Promise.all([
+  const [sRes, mRes, tRes, oRes, qRes, gRes] = await Promise.all([
     sb.from('qrdine_settings').select('*').eq('id', 1).maybeSingle(),
     sb.from('qrdine_menu').select('*').order('id'),
     sb.from('qrdine_tables').select('*').order('id'),
     sb.from('qrdine_orders').select('*').order('created_at', { ascending: false }).limit(500),
     sb.from('qrdine_requests').select('*').order('created_at', { ascending: true }).limit(500),
+    sb.from('qrdine_messages').select('*').order('created_at', { ascending: true }).limit(500),
   ]);
   if (sRes.error) throw sRes.error;
   if (mRes.error) throw mRes.error;
@@ -395,6 +417,9 @@ async function loadFromSupabase() {
   // local requests instead of failing the whole load.
   if (qRes.error) console.warn('QR Dine: qrdine_requests not available yet — service requests stay local.', qRes.error.message);
   else state.requests = (qRes.data || []).map(rowToRequest);
+  // Same for the messages table.
+  if (gRes.error) console.warn('QR Dine: qrdine_messages not available yet — chat messages stay local.', gRes.error.message);
+  else state.messages = (gRes.data || []).map(rowToMessage);
   deriveNextOrderNo();
   saveLocal();
 }
@@ -422,6 +447,12 @@ function applyRequestRow(r) {
   const q = rowToRequest(r);
   const i = state.requests.findIndex(x => x.id === q.id);
   if (i >= 0) state.requests[i] = q; else state.requests.push(q);
+}
+function applyMessageRow(r) {
+  const m = rowToMessage(r);
+  if (!Array.isArray(state.messages)) state.messages = [];
+  const i = state.messages.findIndex(x => x.id === m.id);
+  if (i >= 0) state.messages[i] = m; else state.messages.push(m);
 }
 function subscribeRealtime() {
   if (!sb || liveSubscribed) return;
@@ -454,6 +485,12 @@ function subscribeRealtime() {
         renderAll();
       } else if (payload.new) { noteRequestRow(payload.new); saveLocal(); renderAll(); if (payload.eventType === 'INSERT') playChime(); }
     })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'qrdine_messages' }, (payload) => {
+      if (payload.eventType === 'DELETE') {
+        state.messages = state.messages.filter(x => x.id !== payload.old.id);
+        renderAll();
+      } else if (payload.new) { applyMessageRow(payload.new); saveLocal(); renderAll(); }
+    })
     .subscribe((status) => { updateSyncBadge(status === 'SUBSCRIBED'); });
 }
 
@@ -481,11 +518,16 @@ function persistRequestInsert(r) { return sbSafe(() => sb.from('qrdine_requests'
 function persistRequestUpdate(r) {
   return sbSafe(() => sb.from('qrdine_requests').update(requestToRow(r)).eq('id', r.id));
 }
+/* Chat messages: same fallback — if the table does not exist yet, the
+   message stays in state/localStorage and still arrives on other tabs
+   via the storage-event path. */
+function persistMessageInsert(m) { return sbSafe(() => sb.from('qrdine_messages').insert(messageToRow(m))); }
 async function persistResetDemo() {
   if (!online || !sb) return;
   const seed = seedState();
   await sbSafe(() => sb.from('qrdine_orders').delete().neq('id', '00000000-0000-0000-0000-000000000000'));
   await sbSafe(() => sb.from('qrdine_requests').delete().neq('id', '00000000-0000-0000-0000-000000000000'));
+  await sbSafe(() => sb.from('qrdine_messages').delete().neq('id', '00000000-0000-0000-0000-000000000000'));
   await sbSafe(() => sb.from('qrdine_menu').delete().neq('id', ''));
   await sbSafe(() => sb.from('qrdine_tables').delete().neq('id', ''));
   await sbSafe(() => sb.from('qrdine_menu').insert(seed.menu.map(menuToRow)));
@@ -657,10 +699,18 @@ function renderDashboard() {
   const feed = state.orders.slice().sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 8);
   $('#orders-feed').innerHTML = feed.length ? feed.map(o => {
     const t = tableById(o.tableId);
+    const unread = unreadMsgCount(o.number);
     return '<div class="feed-item"><div><strong>' + esc(o.number) + '</strong> · ' + esc(t ? t.name : '') +
       ' · ' + esc(o.customerName) + ' · ' + o.items.map(i => esc(i.name) + ' ×' + i.qty).join(', ') +
-      '</div><div><span class="status ' + o.status.toLowerCase() + '">' + o.status.toUpperCase() + '</span> <strong>' + fmt(orderItemsTotal(o)) + '</strong></div></div>';
+      '</div><div><span class="status ' + o.status.toLowerCase() + '">' + o.status.toUpperCase() + '</span> <strong>' + fmt(orderItemsTotal(o)) + '</strong> ' +
+      '<button class="btn btn-sm" data-chat="' + o.id + '">Message' + (unread ? ' <span class="msg-badge">' + unread + '</span>' : '') + '</button></div></div>' +
+      (openChatOrder === o.number ? chatThreadHtml(o.number) : '');
   }).join('') : '<p class="muted">No orders yet. Open the customer view and place a test order.</p>';
+  $$('#orders-feed [data-chat]').forEach(b => b.addEventListener('click', () => {
+    const o = state.orders.find(x => x.id === b.dataset.chat); if (!o) return;
+    toggleOrderChat(o.number);
+  }));
+  wireChatInputs($('#orders-feed'));
 
   const openReqs = state.requests.filter(r => r.status === 'New').sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
   $('#requests-feed').innerHTML = openReqs.length ? openReqs.map(r => {
@@ -845,16 +895,24 @@ function renderOrders() {
     const t = tableById(o.tableId);
     const next = { 'New': 'Preparing', 'Preparing': 'Served', 'Served': 'Paid' }[o.status];
     const wa = waCustomerLink(o);
+    const unread = unreadMsgCount(o.number);
     return '<div class="order-row"><div class="order-meta"><span class="o-no">' + esc(o.number) + '</span> · ' + esc(t ? t.name : '') +
       ' · ' + esc(o.customerName) + (o.phone ? ' · ' + esc(o.phone) : '') + '<div class="o-items">' + o.items.map(i => esc(i.name) + ' ×' + i.qty).join(', ') +
       (o.instructions ? '<br>Note: ' + esc(o.instructions) : '') + '</div></div>' +
       '<div><span class="status ' + o.status.toLowerCase() + '">' + o.status.toUpperCase() + '</span> <strong>' + fmt(orderItemsTotal(o)) + '</strong></div>' +
       '<div class="order-actions">' +
       (next ? '<button class="btn btn-sm btn-primary" data-advance="' + o.id + '">' + (next === 'Paid' ? 'Mark Paid' : '→ ' + next) + '</button>' : '') +
+      '<button class="btn btn-sm" data-chat="' + o.id + '">Message' + (unread ? ' <span class="msg-badge">' + unread + '</span>' : '') + '</button>' +
       (wa ? '<a class="btn btn-sm" href="' + wa + '" target="_blank" rel="noopener">WhatsApp</a>' : '') +
       (o.status === 'New' ? '<button class="btn btn-sm btn-danger" data-cancel="' + o.id + '">Cancel</button>' : '') +
-      '</div></div>';
+      '</div></div>' +
+      (openChatOrder === o.number ? chatThreadHtml(o.number) : '');
   }).join('') : '<p class="muted">No orders match this filter.</p>';
+  $$('#orders-list [data-chat]').forEach(b => b.addEventListener('click', () => {
+    const o = state.orders.find(x => x.id === b.dataset.chat); if (!o) return;
+    toggleOrderChat(o.number);
+  }));
+  wireChatInputs($('#orders-list'));
   $$('#orders-list [data-advance]').forEach(b => b.addEventListener('click', () => {
     const o = state.orders.find(x => x.id === b.dataset.advance); if (!o) return;
     advanceOrder(o); renderAll();
@@ -956,7 +1014,7 @@ function renderBillArea() {
     '<div class="bill-actions">' +
       '<button class="btn" id="btn-bill-download">Download Bill</button>' +
       '<button class="btn" id="btn-bill-whatsapp">Send on WhatsApp</button>' +
-      '<button class="btn btn-primary" id="btn-bill-settle">Print &amp; Settle</button>' +
+      '<button class="btn btn-green" id="btn-bill-settle">Print &amp; Settle</button>' +
     '</div></div>';
   renderQR($('#bill-qr'), upi, 160);
   $('#btn-split').addEventListener('click', () => {
@@ -1214,6 +1272,7 @@ function renderCustomer() {
   $('#cust-cartbar').hidden = n === 0;
   $('#cartbar-text').textContent = n + ' item' + (n === 1 ? '' : 's') + ' · ' + fmt(cartTotal());
   renderCartPage();
+  renderConfirmChat();
 }
 function renderCartPage() {
   const entries = Object.entries(cart);
@@ -1263,6 +1322,87 @@ function requestService(type, root) {
   const note = $('.service-note', root);
   if (note) { note.textContent = lastServiceNote; note.hidden = false; }
 }
+/* ---------------- in-app chat (owner ↔ customer) ---------------- */
+/* One thread per order number. Messages travel via Supabase Realtime
+   (qrdine_messages) when online, and via the cross-tab storage-event path
+   in offline demo mode (the whole state, messages included, lives in
+   localStorage). The WhatsApp button stays as well — this chat is in
+   addition to it, not a replacement. */
+let openChatOrder = null; // order number whose owner thread is open
+let chatDrafts = {};       // order number -> draft text (kept across re-renders)
+let lastOrderNumber = ''; // the customer's most recent order (confirm page chat)
+function sendMessage(orderNumber, sender, text) {
+  const t = (text || '').trim();
+  if (!t || !orderNumber) return false;
+  const o = state.orders.find(x => x.number === orderNumber);
+  const m = {
+    id: online ? newUuid() : uid('g'),
+    orderNumber, tableId: o ? o.tableId : '', sender, text: t,
+    createdAt: new Date().toISOString(),
+  };
+  if (!Array.isArray(state.messages)) state.messages = [];
+  state.messages.push(m);
+  save();
+  persistMessageInsert(m);
+  if (customerMode) renderCustomer(); else renderAll();
+  return true;
+}
+function chatBubblesHtml(number) {
+  const list = messagesFor(number);
+  if (!list.length) return '<p class="chat-empty">No messages yet — say hello, messages arrive live.</p>';
+  return list.map(m =>
+    '<div class="chat-msg ' + m.sender + '">' + esc(m.text) +
+    '<span class="chat-meta">' + (m.sender === 'owner' ? 'Restaurant' : 'Customer') + ' · ' +
+    new Date(m.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) + '</span></div>'
+  ).join('');
+}
+function chatThreadHtml(number) {
+  return '<div class="chat-thread" data-chat-thread="' + esc(number) + '">' +
+    '<div class="chat-list">' + chatBubblesHtml(number) + '</div>' +
+    '<div class="chat-input-row"><input data-chat-input="' + esc(number) + '" maxlength="300" placeholder="Type a message…">' +
+    '<button class="btn btn-primary" data-chat-send="' + esc(number) + '">Send</button></div></div>';
+}
+/* Wire the inputs inside a freshly rendered container. Draft text is kept
+   in chatDrafts so typing survives a re-render when a message arrives. */
+function wireChatInputs(root) {
+  if (!root) return;
+  $$('[data-chat-input]', root).forEach(inp => {
+    const num = inp.dataset.chatInput;
+    if (chatDrafts[num] !== undefined) inp.value = chatDrafts[num];
+    inp.addEventListener('input', () => { chatDrafts[num] = inp.value; });
+    inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); sendChatMessage(num); } });
+  });
+  $$('[data-chat-send]', root).forEach(b => b.addEventListener('click', () => sendChatMessage(b.dataset.chatSend)));
+  $$('.chat-list', root).forEach(el => { el.scrollTop = el.scrollHeight; });
+}
+function sendChatMessage(number) {
+  const thread = document.querySelector('[data-chat-thread="' + number + '"]');
+  const inp = thread ? thread.querySelector('[data-chat-input]') : null;
+  const text = inp ? inp.value : (chatDrafts[number] || '');
+  if (!sendMessage(number, customerMode ? 'customer' : 'owner', text)) return;
+  chatDrafts[number] = '';
+  if (inp) inp.value = '';
+}
+/* Owner opens/closes a thread; opening marks the customer's messages read. */
+function toggleOrderChat(number) {
+  openChatOrder = openChatOrder === number ? null : number;
+  if (openChatOrder) {
+    if (!state.msgSeen) state.msgSeen = {};
+    state.msgSeen[number] = new Date().toISOString();
+    saveLocal();
+  }
+  renderAll();
+}
+/* Customer confirm page: only the message list re-renders (the input is
+   static HTML, so typing is never wiped by an incoming reply). */
+function renderConfirmChat() {
+  const list = $('#confirm-chat-list');
+  if (!list || !lastOrderNumber) return;
+  const msgs = messagesFor(lastOrderNumber);
+  list.innerHTML = msgs.length ? chatBubblesHtml(lastOrderNumber)
+    : '<p class="chat-empty">No messages yet — the restaurant will reply here live.</p>';
+  list.scrollTop = list.scrollHeight;
+}
 function placeOrder() {
   const err = $('#order-error');
   const showErr = (msg) => { err.textContent = msg; err.hidden = false; };
@@ -1291,12 +1431,14 @@ function placeOrder() {
   save();
   persistOrderInsert(order);
   cart = {};
+  lastOrderNumber = order.number;
   $('#confirm-order-no').textContent = order.number;
   $('#confirm-table').textContent = customerTable.name;
   $('#confirm-summary').textContent = items.map(i => i.name + ' ×' + i.qty).join(', ') + ' — Total ' + fmt(orderItemsTotal(order));
   const cs = $('#confirm-service');
   if (cs) { cs.innerHTML = serviceButtonsHtml(); wireServiceButtons(cs); }
   showCustPage('confirm');
+  renderConfirmChat();
   renderCustomer();
 }
 
@@ -1322,6 +1464,13 @@ function wireCustomerEvents() {
   $('#btn-view-cart').addEventListener('click', () => showCustPage('cart'));
   $('#btn-back-menu').addEventListener('click', () => showCustPage('menu'));
   $('#order-form').addEventListener('submit', (e) => { e.preventDefault(); placeOrder(); });
+  $('#btn-confirm-chat-send').addEventListener('click', () => {
+    const inp = $('#confirm-chat-input');
+    if (sendMessage(lastOrderNumber, 'customer', inp.value)) inp.value = '';
+  });
+  $('#confirm-chat-input').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); $('#btn-confirm-chat-send').click(); }
+  });
   $('#btn-new-order').addEventListener('click', () => { cart = {}; renderCustomer(); showCustPage('menu'); });
   $('#btn-back-admin').addEventListener('click', () => { location.href = location.pathname; });
 }

@@ -7,10 +7,10 @@
 --   2. Paste this whole file and press Run
 --   3. Confirm the "Schema created" notice, then check Table Editor shows
 --      qrdine_tables, qrdine_menu, qrdine_orders, qrdine_settings,
---      qrdine_requests
+--      qrdine_requests, qrdine_messages
 --
 -- SECURITY NOTE — DEMO-GRADE POLICIES:
---   The policies below let the anon (public) key read/write all five tables.
+--   The policies below let the anon (public) key read/write all six tables.
 --   That is intentional for this demo: the customer menu must write orders
 --   with NO login, and the owner dashboard must read/write from any device.
 --   BEFORE real production use, tighten them: e.g. allow anon INSERT only on
@@ -81,12 +81,23 @@ create table if not exists public.qrdine_requests (
   done_at    timestamptz
 );
 
+create table if not exists public.qrdine_messages (
+  id           uuid primary key default gen_random_uuid(),
+  order_number text not null,
+  table_id     text not null,
+  sender       text not null check (sender in ('owner', 'customer')),
+  text         text not null,
+  created_at   timestamptz not null default now()
+);
+
 create index if not exists qrdine_orders_table_id_idx   on public.qrdine_orders (table_id);
 create index if not exists qrdine_orders_status_idx     on public.qrdine_orders (status);
 create index if not exists qrdine_orders_created_at_idx on public.qrdine_orders (created_at desc);
 create index if not exists qrdine_requests_table_id_idx   on public.qrdine_requests (table_id);
 create index if not exists qrdine_requests_status_idx     on public.qrdine_requests (status);
 create index if not exists qrdine_requests_created_at_idx on public.qrdine_requests (created_at);
+create index if not exists qrdine_messages_order_idx    on public.qrdine_messages (order_number);
+create index if not exists qrdine_messages_created_at_idx on public.qrdine_messages (created_at);
 
 -- ---------------- Row Level Security (demo-grade open policies) ----------------
 
@@ -95,6 +106,7 @@ alter table public.qrdine_menu    enable row level security;
 alter table public.qrdine_orders  enable row level security;
 alter table public.qrdine_settings enable row level security;
 alter table public.qrdine_requests enable row level security;
+alter table public.qrdine_messages enable row level security;
 
 -- Drop first so re-running this file is safe.
 drop policy if exists "demo: all access" on public.qrdine_tables;
@@ -102,6 +114,7 @@ drop policy if exists "demo: all access" on public.qrdine_menu;
 drop policy if exists "demo: all access" on public.qrdine_orders;
 drop policy if exists "demo: all access" on public.qrdine_settings;
 drop policy if exists "demo: all access" on public.qrdine_requests;
+drop policy if exists "demo: all access" on public.qrdine_messages;
 
 create policy "demo: all access" on public.qrdine_tables
   for all to anon, authenticated using (true) with check (true);
@@ -112,6 +125,8 @@ create policy "demo: all access" on public.qrdine_orders
 create policy "demo: all access" on public.qrdine_settings
   for all to anon, authenticated using (true) with check (true);
 create policy "demo: all access" on public.qrdine_requests
+  for all to anon, authenticated using (true) with check (true);
+create policy "demo: all access" on public.qrdine_messages
   for all to anon, authenticated using (true) with check (true);
 
 -- ---------------- Table privileges (required!) ----------------
@@ -126,6 +141,7 @@ grant select, insert, update, delete on public.qrdine_menu to anon, authenticate
 grant select, insert, update, delete on public.qrdine_orders to anon, authenticated;
 grant select, insert, update, delete on public.qrdine_settings to anon, authenticated;
 grant select, insert, update, delete on public.qrdine_requests to anon, authenticated;
+grant select, insert, update, delete on public.qrdine_messages to anon, authenticated;
 
 -- ---------------- Realtime ----------------
 -- The dashboard subscribes to these tables so every device updates live.
@@ -147,6 +163,9 @@ begin
   end if;
   if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'qrdine_requests') then
     alter publication supabase_realtime add table public.qrdine_requests;
+  end if;
+  if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'qrdine_messages') then
+    alter publication supabase_realtime add table public.qrdine_messages;
   end if;
 end $$;
 
