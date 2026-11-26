@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>QR Dine — Restaurant QR Ordering</title>
+<title>Bhukhad Bachelors — Restaurant QR Ordering</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23ea580c'/%3E%3Ctext x='16' y='21' font-size='13' font-family='Arial' font-weight='bold' fill='white' text-anchor='middle'%3EQR%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="styles.css">
 <script src="qrcode.min.js"></script><!-- vendored qrcodejs (MIT) — works offline; CDN version was blocked in this browser -->
@@ -12,7 +12,7 @@
 <body>
 
 <!-- Loading indicator (hidden once data is ready) -->
-<div id="loading">Loading QR Dine…</div>
+<div id="loading">Loading Bhukhad Bachelors…</div>
 
 <!-- Offline banner: shown whenever the shared database is unreachable -->
 <div id="offline-banner" hidden>⚠ Offline — demo data, not shared across devices. Connect to the internet to use the shared database.</div>
@@ -21,7 +21,7 @@
 <div id="login-shell" hidden>
   <div class="login-card">
     <div class="brand-mark login-mark">QR</div>
-    <h1>QR Dine — Owner Login</h1>
+    <h1>Bhukhad Bachelors — Owner Login</h1>
     <p class="muted">Sign in with the owner account to open the restaurant dashboard. Customers never need to log in — they just scan a table QR code.</p>
     <form id="login-form" class="form-stack">
       <label>Email <input id="login-email" type="email" required autocomplete="username" placeholder="owner@restaurant.com"></label>
@@ -40,7 +40,7 @@
   <aside class="sidebar">
     <div class="brand">
       <span class="brand-mark">QR</span>
-      <span class="brand-text">QR Dine<small>Restaurant Manager</small></span>
+      <span class="brand-text">Bhukhad Bachelors<small>Restaurant Manager</small></span>
     </div>
     <nav id="main-nav">
       <button data-view="dashboard" class="active">Dashboard</button>
@@ -181,7 +181,7 @@
           <label>Currency symbol <input id="sf-currency" maxlength="3" value="₹"></label>
           <div class="form-actions"><button type="submit" class="btn btn-primary">Save Settings</button></div>
         </form>
-        <p class="muted">Payments go to the restaurant's UPI ID above. The Bill QR encodes the exact bill amount — the customer only confirms the payment in their UPI app. QR Dine never touches money; the UPI app handles the payment.</p>
+        <p class="muted">Payments go to the restaurant's UPI ID above. The Bill QR encodes the exact bill amount — the customer only confirms the payment in their UPI app. Bhukhad Bachelors never touches money; the UPI app handles the payment.</p>
       </div>
       <div class="card danger-zone">
         <h3>Demo data</h3>

@@ -1,6 +1,6 @@
-# QR Dine — Restaurant QR Ordering
+# Bhukhad Bachelors — Restaurant QR Ordering
 
-A fresh, working restaurant QR ordering system inspired by the QR Mitr demo video
+A fresh, working restaurant QR ordering system for Bhukhad Bachelors, inspired by the QR Mitr demo video
 Raj shared — **not** a copy of QR Mitr's code or brand. Built with vanilla
 HTML/CSS/JS only. No build step, no framework, no account needed.
 
@@ -119,7 +119,7 @@ another tab (`http://localhost:8000/?table=1`).
   Chilli Mushroom ₹200, noodles, rice, Manchurian).
 - Payment QR uses the restaurant's real UPI ID **`yaduvanshirajan228@axl`**.
   The Bill QR encodes the exact bill amount — the customer only confirms the
-  payment in their UPI app. QR Dine never touches money — the customer's
+  payment in their UPI app. Bhukhad Bachelors never touches money — the customer's
   UPI app handles the payment.
 
 ## Try the full flow
