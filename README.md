@@ -22,18 +22,39 @@ HTML/CSS/JS only. No build step, no framework, no account needed.
 
 - **Owner dashboard** — table grid (10 tables + Lounge Room) with live status
   (Available / Occupied / NEW) and each table's 3-digit PIN on its card, plus a
-  live incoming-orders feed.
+  live incoming-orders feed. New orders and service requests play a short
+  alert chime (WebAudio — no audio file); the Sound button in the header
+  turns it off.
 - **Customer QR menu** — scan a table's QR code (or open `index.html?table=1`),
   browse the menu, add dishes, and order. The order is blocked until the
-  correct **Table PIN** is entered.
+  correct **Table PIN** is entered. Every dish shows a **photo**, the veg /
+  non-veg mark, a **spicy level** pill (No spice / Mild / Medium / Hot) and
+  **tag** pills (e.g. Bestseller) on a premium card. The menu covers the full
+  restaurant: Tandoor Se, Chinese Special, Starters, Main Course, Rice &
+  Biryani, Desserts and Drinks & Beverages — 39 dishes. The owner can change
+  any dish's photo, spicy level or tags from Menu Management.
 - **Orders** — live list, statuses New → Preparing → Served → Paid.
+  Orders with a phone number get a **WhatsApp** button that opens a chat
+  to the customer with the order number and status prefilled.
+- **Kitchen** — New and Preparing orders as big cards with items and
+  quantities; one big button moves an order to the next stage
+  (New → Preparing → Served).
+- **Service requests** — after the Table PIN is entered, the customer menu
+  shows Call Waiter / Water / Bill Please / Clean Table buttons. Requests
+  appear live on the dashboard with a count badge and a Done button, and
+  the customer sees a small confirmation (e.g. "Waiter called").
 - **Billing** — pick an occupied table, apply discount (% or ₹) and extra
   charges, choose Cash / UPI / Card, get a **Bill QR** (UPI deep link), then
   Download, send on WhatsApp, or **Print & Settle** (thermal-style receipt via
   the browser print dialog; settling marks the order Paid and frees the table).
+  **Split bill** divides the bill between 2–10 people — each person gets
+  their own share and UPI QR (the shares add up exactly to the total);
+  settling still settles the whole table bill at once.
 - **Analytics** — today's revenue, orders, average bill, top-selling items and
   table occupancy, all computed from the real stored orders.
-- **QR Codes** — one printable QR stand per table.
+- **QR Codes** — one printable QR stand per table. The same menu link also
+  works on an **NFC card/tag** — write the link to the tag and a tap opens
+  the menu; no app change is needed.
 - **Settings** — restaurant name, address, UPI ID, currency. **Reset demo data**
   restores the original demo.
 
@@ -54,21 +75,21 @@ updates live on every device through Supabase Realtime — no refresh.
 
 1. **Create the tables:** Supabase Dashboard → SQL Editor → New query →
    paste `supabase-schema.sql` and Run. It creates `qrdine_tables`,
-   `qrdine_menu`, `qrdine_orders`, `qrdine_settings`, grants the anon /
-   authenticated roles table access (without the GRANT block every request
-   fails with 42501 "permission denied" and the app falls back to offline
-   demo), enables Row Level
-   Security (demo-grade open policies — see the comment at the top of the
-   SQL file), enables Realtime on all four tables, and seeds the 16 menu
-   items, 11 tables with PINs, and the Bhukhad Bachelors settings row.
+   `qrdine_menu`, `qrdine_orders`, `qrdine_settings`, `qrdine_requests`,
+   grants the anon / authenticated roles table access (without the GRANT
+   block every request fails with 42501 "permission denied" and the app falls
+   back to offline demo), enables Row Level Security (demo-grade open
+   policies — see the comment at the top of the SQL file), enables Realtime
+   on all five tables, and seeds the 39-dish starter menu, 11 tables with
+   PINs, and the Bhukhad Bachelors settings row.
    (If you already ran an older version of the file without the GRANT
    block, just re-run the current file — it is idempotent.)
 2. **Create the owner user:** Authentication → Users → Add user → enter the
    owner's email and a password. That is the login for the dashboard.
    (Confirm the user if email confirmation is on.)
 3. **Confirm Realtime:** Database → Replication → check that
-   `qrdine_tables`, `qrdine_orders`, `qrdine_menu` and `qrdine_settings`
-   are listed under the `supabase_realtime` publication.
+   `qrdine_tables`, `qrdine_orders`, `qrdine_menu`, `qrdine_settings` and
+   `qrdine_requests` are listed under the `supabase_realtime` publication.
 4. Deploy the files (same as before — Vercel / Netlify / static host). No
    build step. The app's Supabase URL and anon key are in `app.js`
    (`SUPABASE_URL`, `SUPABASE_ANON_KEY`).
@@ -111,9 +132,18 @@ another tab (`http://localhost:8000/?table=1`).
 - Restaurant: **Bhukhad Bachelors, Bokaro**
 - Tables 1–10, PINs **936, 937, 938 … 945** (Table 1 = 936, Table 2 = 937, and
   so on). Lounge Room PIN is **950**.
-- Menu: "Tandoor Se" (Roti ₹15, Butter Roti ₹20, naans, Tandoori Chicken) and
-  "Chinese Special" (Crispy Baby Corn Chilli ₹180 — Chef's Special, Crispy
-  Chilli Mushroom ₹200, noodles, rice, Manchurian).
+- Menu: 39 dishes across 7 categories — "Tandoor Se" (Roti ₹15, Butter Roti
+  ₹20, naans, Tandoori Chicken), "Chinese Special" (Crispy Baby Corn Chilli
+  ₹180 — Chef's Special, Crispy Chilli Mushroom ₹200, noodles, rice,
+  Manchurian), Starters, Main Course, Rice & Biryani, Desserts and Drinks &
+  Beverages. **These seed dishes are starter data, not the restaurant's real
+  menu** — the owner replaces them with his actual dishes, prices and real
+  dish photos from Menu Management (name, price, photo URL, spicy level,
+  tags). The seed photos are stock photos (Unsplash), each one visually
+  checked against its dish (every URL returns HTTP 200); a few are close
+  matches rather than the exact dish, so the owner should still replace
+  them with real photos of his own dishes. A dish photo that
+  fails to load is hidden automatically, never shown as a broken image.
 - Payment QR uses the restaurant's real UPI ID **`yaduvanshirajan228@axl`**.
   The Bill QR encodes the exact bill amount — the customer only confirms the
   payment in their UPI app. Bhukhad Bachelors never touches money — the customer's
@@ -135,6 +165,13 @@ another tab (`http://localhost:8000/?table=1`).
    ₹373 revenue. (On the shared database, the Occupied/Available change
    appears on every device instantly; in offline demo mode it only shows in
    that browser.)
+6. New in this update: after placing an order, the customer menu shows
+   Call Waiter / Water / Bill Please / Clean Table buttons — tap one and it
+   appears on the dashboard with a count badge (Done clears it). **Kitchen**
+   shows New/Preparing orders with one big advance button. In Billing,
+   **Split bill** (e.g. 3 people on a ₹35 bill → ₹12 + ₹12 + ₹11) gives each
+   person their own UPI QR. On the Orders list, an order with a phone number
+   has a WhatsApp button.
 
 ## Deploy free
 

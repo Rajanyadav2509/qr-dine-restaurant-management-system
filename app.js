@@ -16,25 +16,53 @@ const LS_KEY = 'qrdine-v1';
 const RESTAURANT_UPI = 'yaduvanshirajan228@axl';
 const OLD_DEMO_UPI = 'qrdine@okaxis';
 
+/* Stock food photos (Unsplash, each URL verified HTTP 200). These are
+   starter photos — the owner replaces any of them with his real dish photo
+   via the Photo URL field in Menu Management. */
+const U = (id) => 'https://images.unsplash.com/' + id + '?auto=format&fit=crop&w=800&q=80';
+
 /* ---------------- seed data (offline cache + reset) ---------------- */
 function seedState() {
   const menu = [
-    { id: 'm1', name: 'Roti', price: 15, veg: true, category: 'Tandoor Se', special: false, available: true },
-    { id: 'm2', name: 'Butter Roti', price: 20, veg: true, category: 'Tandoor Se', special: false, available: true },
-    { id: 'm3', name: 'Plain Naan', price: 25, veg: true, category: 'Tandoor Se', special: false, available: true },
-    { id: 'm4', name: 'Butter Naan', price: 35, veg: true, category: 'Tandoor Se', special: false, available: true },
-    { id: 'm5', name: 'Garlic Naan', price: 40, veg: true, category: 'Tandoor Se', special: false, available: true },
-    { id: 'm6', name: 'Tandoori Roti', price: 18, veg: true, category: 'Tandoor Se', special: false, available: true },
-    { id: 'm7', name: 'Missi Roti', price: 30, veg: true, category: 'Tandoor Se', special: false, available: true },
-    { id: 'm8', name: 'Tandoori Chicken (Half)', price: 260, veg: false, category: 'Tandoor Se', special: false, available: true },
-    { id: 'm9', name: 'Crispy Baby Corn Chilli', price: 180, veg: true, category: 'Chinese Special', special: true, available: true },
-    { id: 'm10', name: 'Crispy Chilli Mushroom', price: 200, veg: true, category: 'Chinese Special', special: false, available: true },
-    { id: 'm11', name: 'Veg Hakka Noodles', price: 160, veg: true, category: 'Chinese Special', special: false, available: true },
-    { id: 'm12', name: 'Chilli Paneer', price: 190, veg: true, category: 'Chinese Special', special: false, available: true },
-    { id: 'm13', name: 'Veg Fried Rice', price: 150, veg: true, category: 'Chinese Special', special: false, available: true },
-    { id: 'm14', name: 'Schezwan Noodles', price: 170, veg: true, category: 'Chinese Special', special: false, available: true },
-    { id: 'm15', name: 'Chicken Manchurian', price: 220, veg: false, category: 'Chinese Special', special: false, available: true },
-    { id: 'm16', name: 'Chilli Chicken', price: 240, veg: false, category: 'Chinese Special', special: false, available: true },
+    { id: 'm1', name: 'Roti', price: 15, veg: true, category: 'Tandoor Se', special: false, available: true, image: U('photo-1546833999-b9f581a1996d'), spicy: 'None', tags: '' },
+    { id: 'm2', name: 'Butter Roti', price: 20, veg: true, category: 'Tandoor Se', special: false, available: true, image: U('photo-1626777552726-4a6b54c97e46'), spicy: 'None', tags: '' },
+    { id: 'm3', name: 'Plain Naan', price: 25, veg: true, category: 'Tandoor Se', special: false, available: true, image: U('photo-1617692855027-33b14f061079'), spicy: 'None', tags: '' },
+    { id: 'm4', name: 'Butter Naan', price: 35, veg: true, category: 'Tandoor Se', special: false, available: true, image: U('photo-1617692855027-33b14f061079'), spicy: 'None', tags: 'Bestseller' },
+    { id: 'm5', name: 'Garlic Naan', price: 40, veg: true, category: 'Tandoor Se', special: false, available: true, image: U('photo-1509440159596-0249088772ff'), spicy: 'Mild', tags: '' },
+    { id: 'm6', name: 'Tandoori Roti', price: 18, veg: true, category: 'Tandoor Se', special: false, available: true, image: U('photo-1546833999-b9f581a1996d'), spicy: 'None', tags: '' },
+    { id: 'm7', name: 'Missi Roti', price: 30, veg: true, category: 'Tandoor Se', special: false, available: true, image: U('photo-1626132647523-66f5bf380027'), spicy: 'Mild', tags: '' },
+    { id: 'm8', name: 'Tandoori Chicken (Half)', price: 260, veg: false, category: 'Tandoor Se', special: false, available: true, image: U('photo-1626074353765-517a681e40be'), spicy: 'Medium', tags: 'Bestseller' },
+    { id: 'm9', name: 'Crispy Baby Corn Chilli', price: 180, veg: true, category: 'Chinese Special', special: true, available: true, image: U('photo-1546069901-ba9599a7e63c'), spicy: 'Hot', tags: 'Bestseller' },
+    { id: 'm10', name: 'Crispy Chilli Mushroom', price: 200, veg: true, category: 'Chinese Special', special: false, available: true, image: U('photo-1596797038530-2c107229654b'), spicy: 'Hot', tags: '' },
+    { id: 'm11', name: 'Veg Hakka Noodles', price: 160, veg: true, category: 'Chinese Special', special: false, available: true, image: U('photo-1585032226651-759b368d7246'), spicy: 'Medium', tags: '' },
+    { id: 'm12', name: 'Chilli Paneer', price: 190, veg: true, category: 'Chinese Special', special: false, available: true, image: U('photo-1618449840665-9ed506d73a34'), spicy: 'Hot', tags: 'Bestseller' },
+    { id: 'm13', name: 'Veg Fried Rice', price: 150, veg: true, category: 'Chinese Special', special: false, available: true, image: U('photo-1603133872878-684f208fb84b'), spicy: 'Mild', tags: '' },
+    { id: 'm14', name: 'Schezwan Noodles', price: 170, veg: true, category: 'Chinese Special', special: false, available: true, image: U('photo-1552611052-33e04de081de'), spicy: 'Hot', tags: '' },
+    { id: 'm15', name: 'Chicken Manchurian', price: 220, veg: false, category: 'Chinese Special', special: false, available: true, image: U('photo-1525755662778-989d0524087e'), spicy: 'Medium', tags: '' },
+    { id: 'm16', name: 'Chilli Chicken', price: 240, veg: false, category: 'Chinese Special', special: false, available: true, image: U('photo-1626082927389-6cd097cdc6ec'), spicy: 'Hot', tags: 'Bestseller' },
+    { id: 'm17', name: 'Veg Manchurian', price: 150, veg: true, category: 'Starters', special: false, available: true, image: U('photo-1590301157890-4810ed352733'), spicy: 'Medium', tags: 'Bestseller' },
+    { id: 'm18', name: 'Paneer Tikka', price: 210, veg: true, category: 'Starters', special: false, available: true, image: U('photo-1599487488170-d11ec9c172f0'), spicy: 'Medium', tags: "Chef's Special" },
+    { id: 'm19', name: 'Chicken 65', price: 220, veg: false, category: 'Starters', special: false, available: true, image: U('photo-1569058242253-92a9c755a0ec'), spicy: 'Hot', tags: '' },
+    { id: 'm20', name: 'Veg Samosa (2 pc)', price: 60, veg: true, category: 'Starters', special: false, available: true, image: U('photo-1601050690117-94f5f6fa8bd7'), spicy: 'Mild', tags: '' },
+    { id: 'm21', name: 'Chicken Momos (8 pc)', price: 160, veg: false, category: 'Starters', special: false, available: true, image: U('photo-1496116218417-1a781b1c416c'), spicy: 'Mild', tags: 'Bestseller' },
+    { id: 'm22', name: 'Paneer Butter Masala', price: 220, veg: true, category: 'Main Course', special: false, available: true, image: U('photo-1631452180519-c014fe946bc7'), spicy: 'Medium', tags: 'Bestseller' },
+    { id: 'm23', name: 'Dal Makhani', price: 180, veg: true, category: 'Main Course', special: false, available: true, image: U('photo-1585937421612-70a008356fbe'), spicy: 'Mild', tags: '' },
+    { id: 'm24', name: 'Butter Chicken', price: 280, veg: false, category: 'Main Course', special: false, available: true, image: U('photo-1603894584373-5ac82b2ae398'), spicy: 'Medium', tags: "Chef's Special, Bestseller" },
+    { id: 'm25', name: 'Veg Kolhapuri', price: 200, veg: true, category: 'Main Course', special: false, available: true, image: U('photo-1606491956689-2ea866880c84'), spicy: 'Hot', tags: '' },
+    { id: 'm26', name: 'Chicken Curry', price: 260, veg: false, category: 'Main Course', special: false, available: true, image: U('photo-1598103442097-8b74394b95c6'), spicy: 'Medium', tags: '' },
+    { id: 'm27', name: 'Veg Biryani', price: 180, veg: true, category: 'Rice & Biryani', special: false, available: true, image: U('photo-1563379091339-03b21ab4a4f8'), spicy: 'Medium', tags: '' },
+    { id: 'm28', name: 'Chicken Biryani', price: 240, veg: false, category: 'Rice & Biryani', special: false, available: true, image: U('photo-1631515243349-e0cb75fb8d3a'), spicy: 'Medium', tags: 'Bestseller' },
+    { id: 'm29', name: 'Jeera Rice', price: 140, veg: true, category: 'Rice & Biryani', special: false, available: true, image: U('photo-1603133872878-684f208fb84b'), spicy: 'None', tags: '' },
+    { id: 'm30', name: 'Mutton Biryani', price: 290, veg: false, category: 'Rice & Biryani', special: false, available: true, image: U('photo-1512058564366-18510be2db19'), spicy: 'Hot', tags: "Chef's Special" },
+    { id: 'm31', name: 'Gulab Jamun (2 pc)', price: 60, veg: true, category: 'Desserts', special: false, available: true, image: U('photo-1589119908995-c6837fa14848'), spicy: 'None', tags: 'Bestseller' },
+    { id: 'm32', name: 'Rasmalai', price: 90, veg: true, category: 'Desserts', special: false, available: true, image: U('photo-1488477181946-6428a0291777'), spicy: 'None', tags: '' },
+    { id: 'm33', name: 'Chocolate Brownie with Ice Cream', price: 140, veg: true, category: 'Desserts', special: false, available: true, image: U('photo-1578985545062-69928b1d9587'), spicy: 'None', tags: '' },
+    { id: 'm34', name: 'Vanilla Ice Cream', price: 70, veg: true, category: 'Desserts', special: false, available: true, image: U('photo-1560008581-09826d1de69e'), spicy: 'None', tags: '' },
+    { id: 'm35', name: 'Masala Chai', price: 30, veg: true, category: 'Drinks & Beverages', special: false, available: true, image: U('photo-1594631252845-29fc4cc8cde9'), spicy: 'None', tags: '' },
+    { id: 'm36', name: 'Sweet Lassi', price: 60, veg: true, category: 'Drinks & Beverages', special: false, available: true, image: U('photo-1553530666-ba11a7da3888'), spicy: 'None', tags: 'Bestseller' },
+    { id: 'm37', name: 'Mango Lassi', price: 80, veg: true, category: 'Drinks & Beverages', special: false, available: true, image: U('photo-1600271886742-f049cd451bba'), spicy: 'None', tags: '' },
+    { id: 'm38', name: 'Cold Coffee', price: 90, veg: true, category: 'Drinks & Beverages', special: false, available: true, image: U('photo-1553787499-6f9133860278'), spicy: 'None', tags: '' },
+    { id: 'm39', name: 'Fresh Lime Soda', price: 50, veg: true, category: 'Drinks & Beverages', special: false, available: true, image: U('photo-1581636625402-29b2a704ef13'), spicy: 'None', tags: '' },
   ];
   const tables = [];
   for (let i = 1; i <= 10; i++) {
@@ -46,6 +74,8 @@ function seedState() {
     settings: { name: 'Bhukhad Bachelors', address: 'Market, Royal Garden Park, Bokaro', upiId: RESTAURANT_UPI, currency: '₹' },
     menu, tables,
     orders: [],
+    requests: [],
+    activity: [], // live activity feed — session history, local only (no DB table)
     nextOrderNo: 1001,
   };
 }
@@ -58,7 +88,14 @@ function loadLocal() {
     const s = JSON.parse(raw);
     if (!s || s.v !== 1 || !Array.isArray(s.menu) || !Array.isArray(s.tables)) return seedState();
     if (s.settings && s.settings.upiId === OLD_DEMO_UPI) { s.settings.upiId = RESTAURANT_UPI; try { localStorage.setItem(LS_KEY, JSON.stringify(s)); } catch (e) {} }
-    s.menu.forEach(m => { if (m.available === undefined) m.available = true; });
+    if (!Array.isArray(s.requests)) s.requests = [];
+    if (!Array.isArray(s.activity)) s.activity = [];
+    s.menu.forEach(m => {
+      if (m.available === undefined) m.available = true;
+      if (typeof m.image !== 'string') m.image = '';
+      if (!['None', 'Mild', 'Medium', 'Hot'].includes(m.spicy)) m.spicy = 'None';
+      if (typeof m.tags !== 'string') m.tags = '';
+    });
     return s;
   } catch (e) { return seedState(); }
 }
@@ -67,6 +104,15 @@ function saveLocal() { try { localStorage.setItem(LS_KEY, JSON.stringify(state))
 let state = loadLocal();
 /* save() keeps the offline cache fresh; Supabase writes happen via persist*(). */
 function save() { saveLocal(); }
+
+/* Live activity feed (session history, local only — no new DB table) and
+   the new-order spotlight. feedReady flips on once the first data load has
+   finished, so the initial load never floods the feed with old rows.
+   prevStatNums remembers the last KPI numbers for the count-up animation. */
+let feedReady = false;
+let spotlightTimer = null;
+let lastActivityId = null;
+const prevStatNums = {};
 
 /* ---------------- helpers ---------------- */
 const $ = (s, r) => (r || document).querySelector(s);
@@ -105,6 +151,27 @@ function menuUrlFor(tableId) {
   const n = tableId.replace(/^t/, '');
   return location.origin + location.pathname + '?table=' + n;
 }
+/* WhatsApp: digits only; a 10-digit Indian number gets the 91 prefix. */
+function waDigits(phone) {
+  const d = String(phone || '').replace(/\D/g, '');
+  if (d.length === 10) return '91' + d;
+  return d;
+}
+/* wa.me link to message the customer about their order; '' when no number. */
+function waCustomerLink(o) {
+  const d = waDigits(o.phone);
+  if (!d) return '';
+  const msg = 'Hi ' + (o.customerName || 'there') + ', your order ' + o.number + ' at ' + state.settings.name + ' is ' + o.status + '.';
+  return 'https://wa.me/' + d + '?text=' + encodeURIComponent(msg);
+}
+/* Split a total into n whole-rupee shares that add up exactly to the total. */
+function splitShares(total, n) {
+  const base = Math.floor(total / n);
+  const rem = total - base * n;
+  const shares = [];
+  for (let i = 0; i < n; i++) shares.push(base + (i < rem ? 1 : 0));
+  return shares;
+}
 function deriveNextOrderNo() {
   let max = 1000;
   state.orders.forEach(o => {
@@ -112,6 +179,70 @@ function deriveNextOrderNo() {
     if (m) max = Math.max(max, parseInt(m[1], 10));
   });
   state.nextOrderNo = max + 1;
+}
+
+/* ---------------- live activity feed + new-order spotlight ---------------- */
+/* Every event carries a key; the same event arriving twice (local action +
+   its Realtime echo, or a storage event after the other tab already saved
+   the entry) is logged once. Feed is newest first, capped at 20. */
+function logActivity(kind, key, text) {
+  if (!Array.isArray(state.activity)) state.activity = [];
+  if (state.activity.some(a => a.key === key)) return;
+  const entry = { id: uid('a'), kind, key, text, at: new Date().toISOString() };
+  state.activity.unshift(entry);
+  state.activity = state.activity.slice(0, 20);
+  lastActivityId = entry.id;
+  saveLocal();
+  if (!customerMode) renderAll();
+}
+function activityTextOrder(o) {
+  const t = tableById(o.tableId);
+  return 'New order ' + o.number + ' · ' + (t ? t.name : '') + ' · ' + o.items.map(i => i.name + ' ×' + i.qty).join(', ') + ' — ' + fmt(orderItemsTotal(o));
+}
+function activityTextStatus(o) {
+  const t = tableById(o.tableId);
+  return o.number + ' → ' + o.status + ' · ' + (t ? t.name : '');
+}
+function activityTextRequest(r, done) {
+  const t = tableById(r.tableId);
+  return r.type + (done ? ' done' : ' requested') + ' · ' + (t ? t.name : '');
+}
+/* Merge a realtime order row and log what actually changed. Returns the
+   merged order. Local actions log themselves; the Realtime echo of our own
+   write finds the row already in state, so nothing is logged twice. */
+function noteOrderRow(r) {
+  const prev = state.orders.find(x => x.id === r.id);
+  const o = rowToOrder(r);
+  applyOrderRow(r);
+  if (!feedReady) return o;
+  if (!prev) { logActivity('order', 'order-new:' + o.id, activityTextOrder(o)); showSpotlight(o); }
+  else if (prev.status !== o.status) { logActivity('status', 'order-status:' + o.id + ':' + o.status, activityTextStatus(o)); }
+  return o;
+}
+function noteRequestRow(r) {
+  const prev = state.requests.find(x => x.id === r.id);
+  const q = rowToRequest(r);
+  applyRequestRow(r);
+  if (!feedReady) return q;
+  if (!prev) logActivity('request', 'req-new:' + q.id, activityTextRequest(q, false));
+  else if (prev.status !== q.status && q.status === 'Done') logActivity('request', 'req-done:' + q.id, activityTextRequest(q, true));
+  return q;
+}
+function showSpotlight(o) {
+  if (customerMode) return;
+  const el = $('#spotlight'); if (!el) return;
+  const t = tableById(o.tableId);
+  el.innerHTML = '<span class="spot-dot"></span><span class="grow"><strong>New order</strong> — ' + esc(t ? t.name : '') + ' · ' + esc(o.number) + ' · <strong>' + fmt(orderItemsTotal(o)) + '</strong></span><button class="spot-close" aria-label="Dismiss">✕</button>';
+  el.hidden = false;
+  const closeBtn = $('.spot-close', el);
+  if (closeBtn) closeBtn.addEventListener('click', () => { el.hidden = true; });
+  if (spotlightTimer) clearTimeout(spotlightTimer);
+  spotlightTimer = setTimeout(() => { el.hidden = true; }, 6000);
+}
+/* Today's orders, excluding cancelled ones — the shared base for the
+   dashboard highlights and the Analytics "today" sections. */
+function todaysOrders() {
+  return state.orders.filter(o => isToday(o.createdAt) && o.status !== 'Cancelled');
 }
 
 /* QR rendering (qrcodejs vendored — works offline; text fallback if it fails) */
@@ -150,10 +281,29 @@ function orderToRow(o) {
   };
 }
 function rowToMenu(r) {
-  return { id: r.id, name: r.name, price: Number(r.price), veg: !!r.veg, category: r.category, special: !!r.special, available: r.available !== false };
+  const spicy = ['None', 'Mild', 'Medium', 'Hot'].includes(r.spicy) ? r.spicy : 'None';
+  return { id: r.id, name: r.name, price: Number(r.price), veg: !!r.veg, category: r.category, special: !!r.special, available: r.available !== false, image: r.image || '', spicy, tags: r.tags || '' };
 }
 function menuToRow(m) {
-  return { id: m.id, name: m.name, price: m.price, veg: !!m.veg, category: m.category, special: !!m.special, available: m.available !== false };
+  return { id: m.id, name: m.name, price: m.price, veg: !!m.veg, category: m.category, special: !!m.special, available: m.available !== false, image: m.image || null, spicy: m.spicy || 'None', tags: m.tags || null };
+}
+/* Dish photo / spicy / tags presentation. A photo that fails to load hides
+   itself (and its frame) so a broken-image icon never shows. */
+function dishPhotoHtml(m, cls, frameCls) {
+  if (!m.image) return '';
+  const onErr = frameCls
+    ? "this.closest('." + frameCls + "').style.display='none'"
+    : 'this.remove()';
+  return '<img class="' + cls + '" src="' + esc(m.image) + '" alt="' + esc(m.name) + '" onerror="' + onErr + '">';
+}
+const SPICY_LABEL = { None: 'No spice', Mild: 'Mild', Medium: 'Medium', Hot: 'Hot' };
+function spicyPillHtml(m) {
+  const level = ['None', 'Mild', 'Medium', 'Hot'].includes(m.spicy) ? m.spicy : 'None';
+  return '<span class="spicy-pill spicy-' + level.toLowerCase() + '">' + SPICY_LABEL[level] + '</span>';
+}
+function tagsPillsHtml(m) {
+  return String(m.tags || '').split(',').map(t => t.trim()).filter(Boolean)
+    .map(t => '<span class="tag-pill">' + esc(t) + '</span>').join('');
 }
 function rowToTable(r) {
   return { id: r.id, name: r.name, pin: r.pin, type: r.type, status: r.status };
@@ -163,6 +313,12 @@ function tableToRow(t) {
 }
 function rowToSettings(r) {
   return { name: r.restaurant_name, address: r.address || '', upiId: r.upi_id, currency: r.currency || '₹' };
+}
+function rowToRequest(r) {
+  return { id: r.id, tableId: r.table_id, type: r.type, status: r.status, createdAt: r.created_at, doneAt: r.done_at || null };
+}
+function requestToRow(r) {
+  return { id: r.id, table_id: r.tableId, type: r.type, status: r.status, created_at: r.createdAt, done_at: r.doneAt || null };
 }
 function settingsToRow() {
   return { id: 1, restaurant_name: state.settings.name, address: state.settings.address, upi_id: state.settings.upiId, currency: state.settings.currency };
@@ -174,6 +330,10 @@ let online = false;     // true once the shared database answered
 let liveSubscribed = false;
 let ownerSession = null;
 let offlineDemo = false; // owner chose "Continue in offline demo"
+let soundOn = true;     // alert chime for new orders / service requests (dashboard only)
+let audioCtx = null;
+let soundArmed = false; // true after the owner's first click/tap in the dashboard
+try { soundOn = localStorage.getItem('qrdine-sound') !== 'off'; } catch (e) {}
 
 function withTimeout(promise, ms) {
   return Promise.race([
@@ -216,11 +376,12 @@ async function initSupabase() {
 }
 
 async function loadFromSupabase() {
-  const [sRes, mRes, tRes, oRes] = await Promise.all([
+  const [sRes, mRes, tRes, oRes, qRes] = await Promise.all([
     sb.from('qrdine_settings').select('*').eq('id', 1).maybeSingle(),
     sb.from('qrdine_menu').select('*').order('id'),
     sb.from('qrdine_tables').select('*').order('id'),
     sb.from('qrdine_orders').select('*').order('created_at', { ascending: false }).limit(500),
+    sb.from('qrdine_requests').select('*').order('created_at', { ascending: true }).limit(500),
   ]);
   if (sRes.error) throw sRes.error;
   if (mRes.error) throw mRes.error;
@@ -230,6 +391,10 @@ async function loadFromSupabase() {
   if (Array.isArray(mRes.data) && mRes.data.length) state.menu = mRes.data.map(rowToMenu);
   if (Array.isArray(tRes.data) && tRes.data.length) state.tables = tRes.data.map(rowToTable);
   state.orders = (oRes.data || []).map(rowToOrder);
+  // The requests table may not exist yet (schema not re-run): keep the
+  // local requests instead of failing the whole load.
+  if (qRes.error) console.warn('QR Dine: qrdine_requests not available yet — service requests stay local.', qRes.error.message);
+  else state.requests = (qRes.data || []).map(rowToRequest);
   deriveNextOrderNo();
   saveLocal();
 }
@@ -253,6 +418,11 @@ function applyMenuRow(r) {
   const i = state.menu.findIndex(x => x.id === m.id);
   if (i >= 0) state.menu[i] = m; else state.menu.push(m);
 }
+function applyRequestRow(r) {
+  const q = rowToRequest(r);
+  const i = state.requests.findIndex(x => x.id === q.id);
+  if (i >= 0) state.requests[i] = q; else state.requests.push(q);
+}
 function subscribeRealtime() {
   if (!sb || liveSubscribed) return;
   liveSubscribed = true;
@@ -261,7 +431,7 @@ function subscribeRealtime() {
       if (payload.eventType === 'DELETE') {
         state.orders = state.orders.filter(x => x.id !== payload.old.id);
         renderAll();
-      } else if (payload.new) { applyOrderRow(payload.new); saveLocal(); renderAll(); }
+      } else if (payload.new) { applyOrderRow(payload.new); saveLocal(); renderAll(); if (payload.eventType === 'INSERT') playChime(); }
     })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'qrdine_tables' }, (payload) => {
       if (payload.eventType === 'DELETE') {
@@ -277,6 +447,12 @@ function subscribeRealtime() {
     })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'qrdine_settings' }, (payload) => {
       if (payload.new) { state.settings = rowToSettings(payload.new); saveLocal(); renderAll(); }
+    })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'qrdine_requests' }, (payload) => {
+      if (payload.eventType === 'DELETE') {
+        state.requests = state.requests.filter(x => x.id !== payload.old.id);
+        renderAll();
+      } else if (payload.new) { applyRequestRow(payload.new); saveLocal(); renderAll(); if (payload.eventType === 'INSERT') playChime(); }
     })
     .subscribe((status) => { updateSyncBadge(status === 'SUBSCRIBED'); });
 }
@@ -299,10 +475,17 @@ function persistTableDelete(id) { return sbSafe(() => sb.from('qrdine_tables').d
 function persistMenu(m) { return sbSafe(() => sb.from('qrdine_menu').upsert(menuToRow(m))); }
 function persistMenuDelete(id) { return sbSafe(() => sb.from('qrdine_menu').delete().eq('id', id)); }
 function persistSettings() { return sbSafe(() => sb.from('qrdine_settings').upsert(settingsToRow())); }
+/* Service requests: if the insert fails (table not created yet) the request
+   stays in state/localStorage, so the flow still works in demo mode. */
+function persistRequestInsert(r) { return sbSafe(() => sb.from('qrdine_requests').insert(requestToRow(r))); }
+function persistRequestUpdate(r) {
+  return sbSafe(() => sb.from('qrdine_requests').update(requestToRow(r)).eq('id', r.id));
+}
 async function persistResetDemo() {
   if (!online || !sb) return;
   const seed = seedState();
   await sbSafe(() => sb.from('qrdine_orders').delete().neq('id', '00000000-0000-0000-0000-000000000000'));
+  await sbSafe(() => sb.from('qrdine_requests').delete().neq('id', '00000000-0000-0000-0000-000000000000'));
   await sbSafe(() => sb.from('qrdine_menu').delete().neq('id', ''));
   await sbSafe(() => sb.from('qrdine_tables').delete().neq('id', ''));
   await sbSafe(() => sb.from('qrdine_menu').insert(seed.menu.map(menuToRow)));
@@ -350,8 +533,38 @@ function updateSyncBadge(live) {
   }
 }
 
+/* ---------------- sound alerts (dashboard only, WebAudio chime) ---------------- */
+/* Browsers block sound before any user gesture: the chime is armed on the
+   owner's first click/tap inside the dashboard, and only plays after that.
+   The customer menu never arms audio, so it stays silent. No audio file,
+   no new dependency — a two-note oscillator chime. */
+function armSound() {
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    soundArmed = true;
+  } catch (e) { /* audio unavailable — stay silent */ }
+}
+function playChime() {
+  if (!soundOn || !soundArmed || !audioCtx) return;
+  try {
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    const t0 = audioCtx.currentTime;
+    [880, 1174.66].forEach((freq, i) => {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine'; osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.0001, t0 + i * 0.16);
+      gain.gain.exponentialRampToValueAtTime(0.25, t0 + i * 0.16 + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t0 + i * 0.16 + 0.35);
+      osc.connect(gain); gain.connect(audioCtx.destination);
+      osc.start(t0 + i * 0.16); osc.stop(t0 + i * 0.16 + 0.4);
+    });
+  } catch (e) { /* ignore audio errors */ }
+}
+
 /* ---------------- navigation ---------------- */
-const VIEW_TITLES = { dashboard: 'Dashboard', menu: 'Menu Management', tables: 'Tables', orders: 'Orders', billing: 'Billing', analytics: 'Analytics', qrcodes: 'QR Codes', settings: 'Settings' };
+const VIEW_TITLES = { dashboard: 'Dashboard', menu: 'Menu Management', tables: 'Tables', orders: 'Orders', kitchen: 'Kitchen', billing: 'Billing', analytics: 'Analytics', qrcodes: 'QR Codes', settings: 'Settings' };
 let currentView = 'dashboard';
 function showView(name) {
   currentView = name;
@@ -362,7 +575,7 @@ function showView(name) {
 }
 function renderView(name) {
   ({ dashboard: renderDashboard, menu: renderMenuAdmin, tables: renderTablesAdmin,
-     orders: renderOrders, billing: renderBilling, analytics: renderAnalytics,
+     orders: renderOrders, kitchen: renderKitchen, billing: renderBilling, analytics: renderAnalytics,
      qrcodes: renderQrStands, settings: renderSettings }[name] || (() => {}))();
 }
 function renderAll() {
@@ -371,12 +584,21 @@ function renderAll() {
   const newCount = state.orders.filter(o => o.status === 'New').length;
   const badge = $('#orders-badge');
   badge.hidden = newCount === 0; badge.textContent = newCount;
+  const openReqCount = state.requests.filter(r => r.status === 'New').length;
+  const reqBadge = $('#requests-badge');
+  reqBadge.hidden = openReqCount === 0; reqBadge.textContent = openReqCount;
   renderView(currentView);
   if (customerMode) renderCustomer();
 }
 window.addEventListener('storage', (e) => {
   // Same-browser tabs only matter in offline mode; online mode uses Realtime.
-  if (!online && e.key === LS_KEY) { state = loadLocal(); renderAll(); }
+  if (!online && e.key === LS_KEY) {
+    const prevOrders = state.orders.length;
+    const prevOpenReqs = state.requests.filter(r => r.status === 'New').length;
+    state = loadLocal(); renderAll();
+    // A new order / service request arriving from another tab chimes.
+    if (state.orders.length > prevOrders || state.requests.filter(r => r.status === 'New').length > prevOpenReqs) playChime();
+  }
 });
 
 /* ---------------- dashboard ---------------- */
@@ -417,6 +639,20 @@ function renderDashboard() {
       ' · ' + esc(o.customerName) + ' · ' + o.items.map(i => esc(i.name) + ' ×' + i.qty).join(', ') +
       '</div><div><span class="status ' + o.status.toLowerCase() + '">' + o.status.toUpperCase() + '</span> <strong>' + fmt(orderItemsTotal(o)) + '</strong></div></div>';
   }).join('') : '<p class="muted">No orders yet. Open the customer view and place a test order.</p>';
+
+  const openReqs = state.requests.filter(r => r.status === 'New').sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+  $('#requests-feed').innerHTML = openReqs.length ? openReqs.map(r => {
+    const t = tableById(r.tableId);
+    return '<div class="feed-item req-item"><div><strong>' + esc(r.type) + '</strong> · ' + esc(t ? t.name : '') +
+      ' · <span class="muted">' + new Date(r.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) + '</span></div>' +
+      '<button class="btn btn-sm btn-primary" data-req-done="' + r.id + '">Done</button></div>';
+  }).join('') : '<p class="muted">No service requests waiting.</p>';
+  $$('#requests-feed [data-req-done]').forEach(b => b.addEventListener('click', () => markRequestDone(b.dataset.reqDone)));
+}
+function markRequestDone(id) {
+  const r = state.requests.find(x => x.id === id); if (!r) return;
+  r.status = 'Done'; r.doneAt = new Date().toISOString();
+  save(); persistRequestUpdate(r); renderAll();
 }
 function statCard(label, value) {
   return '<div class="stat"><div class="stat-label">' + esc(label) + '</div><div class="stat-value">' + esc(value) + '</div></div>';
@@ -433,9 +669,9 @@ function renderMenuAdmin() {
   filter.value = cur;
   const list = state.menu.filter(m => !cur || m.category === cur);
   $('#menu-list').innerHTML = list.length ? list.map(m =>
-    '<div class="menu-row"><div><span class="veg-mark' + (m.veg ? '' : ' nonveg') + '"></span>' +
+    '<div class="menu-row">' + dishPhotoHtml(m, 'menu-thumb') + '<div><span class="veg-mark' + (m.veg ? '' : ' nonveg') + '"></span>' +
     '<span class="m-name">' + esc(m.name) + '</span>' + (m.special ? '<span class="special-tag">Chef\'s Special</span>' : '') +
-    '<div class="m-sub">' + esc(m.category) + ' · ' + fmt(m.price) + '</div></div>' +
+    '<div class="m-sub">' + esc(m.category) + ' · ' + fmt(m.price) + ' · ' + spicyPillHtml(m) + ' ' + tagsPillsHtml(m) + '</div></div>' +
     '<div class="order-actions"><button class="btn btn-sm" data-edit="' + m.id + '">Edit</button>' +
     '<button class="btn btn-sm btn-danger" data-del="' + m.id + '">Delete</button></div></div>'
   ).join('') : '<p class="muted">No items in this category.</p>';
@@ -452,6 +688,9 @@ function startMenuEdit(id) {
   editingMenuId = id;
   $('#mf-name').value = m.name; $('#mf-price').value = m.price;
   $('#mf-category').value = m.category; $('#mf-veg').checked = m.veg; $('#mf-special').checked = !!m.special;
+  $('#mf-image').value = m.image || '';
+  $('#mf-spicy').value = ['None', 'Mild', 'Medium', 'Hot'].includes(m.spicy) ? m.spicy : 'None';
+  $('#mf-tags').value = m.tags || '';
   $('#menu-form-title').textContent = 'Edit Item';
   $('#mf-submit').textContent = 'Save Changes';
   $('#mf-cancel').hidden = false;
@@ -493,6 +732,13 @@ function renderTablesAdmin() {
 
 /* ---------------- orders ---------------- */
 let orderFilter = '';
+/* Advance one step along New → Preparing → Served → Paid. Shared by the
+   Orders list and the Kitchen view. */
+function advanceOrder(o) {
+  o.status = { 'New': 'Preparing', 'Preparing': 'Served', 'Served': 'Paid' }[o.status];
+  if (o.status === 'Paid') { o.finalTotal = orderItemsTotal(o); o.settledAt = new Date().toISOString(); o.paymentMode = o.paymentMode || 'Cash'; }
+  refreshTableStatus(o.tableId); save(); persistOrderUpdate(o);
+}
 function renderOrders() {
   $$('[data-ofilter]').forEach(b => b.classList.toggle('active', b.dataset.ofilter === orderFilter));
   const list = state.orders.slice().sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
@@ -500,24 +746,45 @@ function renderOrders() {
   $('#orders-list').innerHTML = list.length ? list.map(o => {
     const t = tableById(o.tableId);
     const next = { 'New': 'Preparing', 'Preparing': 'Served', 'Served': 'Paid' }[o.status];
+    const wa = waCustomerLink(o);
     return '<div class="order-row"><div class="order-meta"><span class="o-no">' + esc(o.number) + '</span> · ' + esc(t ? t.name : '') +
-      ' · ' + esc(o.customerName) + '<div class="o-items">' + o.items.map(i => esc(i.name) + ' ×' + i.qty).join(', ') +
+      ' · ' + esc(o.customerName) + (o.phone ? ' · ' + esc(o.phone) : '') + '<div class="o-items">' + o.items.map(i => esc(i.name) + ' ×' + i.qty).join(', ') +
       (o.instructions ? '<br>Note: ' + esc(o.instructions) : '') + '</div></div>' +
       '<div><span class="status ' + o.status.toLowerCase() + '">' + o.status.toUpperCase() + '</span> <strong>' + fmt(orderItemsTotal(o)) + '</strong></div>' +
       '<div class="order-actions">' +
       (next ? '<button class="btn btn-sm btn-primary" data-advance="' + o.id + '">' + (next === 'Paid' ? 'Mark Paid' : '→ ' + next) + '</button>' : '') +
+      (wa ? '<a class="btn btn-sm" href="' + wa + '" target="_blank" rel="noopener">WhatsApp</a>' : '') +
       (o.status === 'New' ? '<button class="btn btn-sm btn-danger" data-cancel="' + o.id + '">Cancel</button>' : '') +
       '</div></div>';
   }).join('') : '<p class="muted">No orders match this filter.</p>';
   $$('#orders-list [data-advance]').forEach(b => b.addEventListener('click', () => {
     const o = state.orders.find(x => x.id === b.dataset.advance); if (!o) return;
-    o.status = { 'New': 'Preparing', 'Preparing': 'Served', 'Served': 'Paid' }[o.status];
-    if (o.status === 'Paid') { o.finalTotal = orderItemsTotal(o); o.settledAt = new Date().toISOString(); o.paymentMode = o.paymentMode || 'Cash'; }
-    refreshTableStatus(o.tableId); save(); persistOrderUpdate(o); renderAll();
+    advanceOrder(o); renderAll();
   }));
   $$('#orders-list [data-cancel]').forEach(b => b.addEventListener('click', () => {
     const o = state.orders.find(x => x.id === b.dataset.cancel); if (!o) return;
     if (confirm('Cancel order ' + o.number + '?')) { o.status = 'Cancelled'; refreshTableStatus(o.tableId); save(); persistOrderUpdate(o); renderAll(); }
+  }));
+}
+
+/* ---------------- kitchen ---------------- */
+/* Only New and Preparing orders, as big cards. One big button moves the
+   order to the next stage, reusing the same advance logic as Orders. */
+function renderKitchen() {
+  const list = state.orders.filter(o => o.status === 'New' || o.status === 'Preparing')
+    .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+  $('#kitchen-list').innerHTML = list.length ? list.map(o => {
+    const t = tableById(o.tableId);
+    const next = o.status === 'New' ? 'Preparing' : 'Served';
+    return '<div class="card kitchen-card k-' + o.status.toLowerCase() + '"><div class="kitchen-head"><div><strong>' + esc(o.number) + '</strong> · ' + esc(t ? t.name : '') +
+      ' · ' + esc(o.customerName) + '</div><span class="status ' + o.status.toLowerCase() + '">' + o.status.toUpperCase() + '</span></div>' +
+      '<ul class="kitchen-items">' + o.items.map(i => '<li><strong>' + i.qty + '×</strong> ' + esc(i.name) + '</li>').join('') + '</ul>' +
+      (o.instructions ? '<p class="muted">Note: ' + esc(o.instructions) + '</p>' : '') +
+      '<button class="btn btn-primary btn-block kitchen-advance" data-kadvance="' + o.id + '">→ ' + next + '</button></div>';
+  }).join('') : '<p class="muted">No orders in the kitchen right now.</p>';
+  $$('#kitchen-list [data-kadvance]').forEach(b => b.addEventListener('click', () => {
+    const o = state.orders.find(x => x.id === b.dataset.kadvance); if (!o) return;
+    advanceOrder(o); renderAll();
   }));
 }
 
@@ -526,6 +793,7 @@ let billTableId = '';
 let billDiscount = { mode: 'percent', value: 0 };
 let billExtra = 0;
 let billPayMode = 'Cash';
+let splitN = 0; // 0 = not splitting; 2–10 people when splitting
 
 function renderBilling() {
   const sel = $('#bill-table');
@@ -580,12 +848,27 @@ function renderBillArea() {
     '</div>' +
     '<h3 style="margin-top:16px">Bill QR — scan to pay ' + fmt(tot.grand) + ' by UPI</h3>' +
     '<div class="qr-box"><div class="qr-img" id="bill-qr"></div><div class="muted">UPI ID: <code>' + esc(state.settings.upiId) + '</code><br>Pay to: ' + esc(state.settings.name) + '<br><small>Scan to pay the exact bill amount — the amount is fixed in this QR, the customer only confirms the payment.</small></div></div>' +
+    '<h3 style="margin-top:16px">Split bill</h3>' +
+    '<div class="split-row"><label style="max-width:140px">People <input id="split-n" type="number" min="2" max="10" value="' + (splitN || 2) + '"></label>' +
+    '<button class="btn" id="btn-split">Split bill</button>' +
+    (splitN ? '<button class="btn" id="btn-split-clear">Clear split</button>' : '') + '</div>' +
+    (splitN ? '<p class="muted">Each person pays their share — the shares add up exactly to ' + fmt(tot.grand) + '. Settling still settles the whole table bill at once.</p>' +
+      '<div id="split-shares">' + splitShares(tot.grand, splitN).map((s, i) =>
+        '<div class="split-share"><div class="qr-img" id="split-qr-' + i + '"></div><div><strong>Person ' + (i + 1) + '</strong><br>' + fmt(s) + '<br><span class="muted">Scan to pay ' + fmt(s) + ' by UPI</span></div></div>').join('') + '</div>' : '') +
     '<div class="bill-actions">' +
       '<button class="btn" id="btn-bill-download">Download Bill</button>' +
       '<button class="btn" id="btn-bill-whatsapp">Send on WhatsApp</button>' +
       '<button class="btn btn-primary" id="btn-bill-settle">Print &amp; Settle</button>' +
     '</div></div>';
   renderQR($('#bill-qr'), upi, 160);
+  $('#btn-split').addEventListener('click', () => {
+    const n = parseInt($('#split-n').value, 10);
+    splitN = Math.max(2, Math.min(10, n || 0));
+    renderBillArea();
+  });
+  const splitClear = $('#btn-split-clear');
+  if (splitClear) splitClear.addEventListener('click', () => { splitN = 0; renderBillArea(); });
+  if (splitN) splitShares(tot.grand, splitN).forEach((s, i) => renderQR($('#split-qr-' + i), upiLink(s), 120));
   $('#bd-mode').addEventListener('change', (e) => { billDiscount.mode = e.target.value; renderBillArea(); });
   $('#bd-value').addEventListener('input', (e) => { billDiscount.value = Math.max(0, Number(e.target.value) || 0); renderBillArea(); });
   $('#bd-extra').addEventListener('input', (e) => { billExtra = Math.max(0, Number(e.target.value) || 0); renderBillArea(); });
@@ -645,7 +928,7 @@ function settleBill(tableId, tot) {
   refreshTableStatus(tableId);
   save();
   orders.forEach(o => persistOrderUpdate(o));
-  billTableId = ''; billDiscount = { mode: 'percent', value: 0 }; billExtra = 0;
+  billTableId = ''; billDiscount = { mode: 'percent', value: 0 }; billExtra = 0; splitN = 0;
   renderAll();
   alert('Bill settled. ' + (tableById(tableId) ? tableById(tableId).name : 'Table') + ' is now Available.');
 }
@@ -732,6 +1015,15 @@ let customerTable = null;
 let cart = {};
 let custSearch = '';
 let custCat = '';
+let pinUnlocked = false; // set once the customer enters the correct Table PIN
+let lastServiceNote = '';
+const SERVICE_TYPES = ['Call Waiter', 'Water', 'Bill Please', 'Clean Table'];
+const SERVICE_CONFIRM = {
+  'Call Waiter': 'Waiter called — they will be right with you.',
+  'Water': 'Water requested — the waiter will bring it.',
+  'Bill Please': 'Bill requested — the waiter will bring your bill.',
+  'Clean Table': 'Table cleaning requested.',
+};
 
 function customerTableFromUrl() {
   const n = new URLSearchParams(location.search).get('table');
@@ -754,17 +1046,28 @@ function renderCustomer() {
   $('#cust-tabs').innerHTML = '<button class="chip' + (custCat === '' ? ' active' : '') + '" data-cat="">All</button>' +
     cats.map(c => '<button class="chip' + (custCat === c ? ' active' : '') + '" data-cat="' + esc(c) + '">' + esc(c) + '</button>').join('');
   $$('#cust-tabs .chip').forEach(b => b.addEventListener('click', () => { custCat = b.dataset.cat; renderCustomer(); }));
+  const svc = $('#cust-service');
+  if (svc) {
+    if (pinUnlocked) {
+      svc.hidden = false;
+      svc.innerHTML = serviceButtonsHtml();
+      wireServiceButtons(svc);
+      if (lastServiceNote) { const note = $('.service-note', svc); if (note) { note.textContent = lastServiceNote; note.hidden = false; } }
+    } else svc.hidden = true;
+  }
   const q = custSearch.trim().toLowerCase();
   const items = state.menu.filter(m => m.available !== false && (!custCat || m.category === custCat) && (!q || m.name.toLowerCase().includes(q)));
   $('#cust-items').innerHTML = items.length ? items.map(m => {
     const qty = cart[m.id] || 0;
-    return '<div class="cust-item"><div><span class="veg-mark' + (m.veg ? '' : ' nonveg') + '"></span>' +
-      '<span class="ci-name">' + esc(m.name) + '</span>' + (m.special ? '<span class="special-tag">Chef\'s Special</span>' : '') +
-      '<div class="ci-price">' + esc(m.category) + ' · ' + fmt(m.price) + '</div></div>' +
-      (qty === 0
+    return '<div class="cust-card"><div class="cust-photo">' + dishPhotoHtml(m, 'cust-photo-img', 'cust-photo') + '</div>' +
+      '<div class="cust-info"><div><span class="veg-mark' + (m.veg ? '' : ' nonveg') + '"></span>' +
+      '<span class="ci-name">' + esc(m.name) + '</span>' + (m.special ? '<span class="special-tag">Chef\'s Special</span>' : '') + '</div>' +
+      '<div class="ci-price">' + esc(m.category) + ' · ' + fmt(m.price) + '</div>' +
+      '<div class="ci-attrs">' + spicyPillHtml(m) + tagsPillsHtml(m) + '</div></div>' +
+      '<div class="cust-action">' + (qty === 0
         ? '<button class="add-btn" data-add="' + m.id + '">ADD</button>'
         : '<div class="stepper"><button data-dec="' + m.id + '" aria-label="Decrease">−</button><span class="qty">' + qty + '</span><button data-inc="' + m.id + '" aria-label="Increase">+</button></div>') +
-      '</div>';
+      '</div></div>';
   }).join('') : '<p class="muted">No dishes match your search.</p>';
   $$('#cust-items [data-add]').forEach(b => b.addEventListener('click', () => { cart[b.dataset.add] = 1; renderCustomer(); }));
   $$('#cust-items [data-inc]').forEach(b => b.addEventListener('click', () => { cart[b.dataset.inc]++; renderCustomer(); }));
@@ -782,7 +1085,7 @@ function renderCartPage() {
   const entries = Object.entries(cart);
   $('#cart-items').innerHTML = entries.length ? entries.map(([id, qty]) => {
     const m = itemById(id); if (!m) return '';
-    return '<div class="cust-item"><div><span class="veg-mark' + (m.veg ? '' : ' nonveg') + '"></span>' +
+    return '<div class="cust-item">' + dishPhotoHtml(m, 'cart-thumb') + '<div><span class="veg-mark' + (m.veg ? '' : ' nonveg') + '"></span>' +
       '<span class="ci-name">' + esc(m.name) + '</span><div class="ci-price">' + fmt(m.price) + ' each</div></div>' +
       '<div class="stepper"><button data-cdec="' + id + '">−</button><span class="qty">' + qty + '</span><button data-cinc="' + id + '">+</button></div>' +
       '<strong>' + fmt(m.price * qty) + '</strong></div>';
@@ -801,6 +1104,30 @@ function showCustPage(which) {
   $('#cust-confirm-page').hidden = which !== 'confirm';
   $('#cust-cartbar').hidden = which !== 'menu' || cartCount() === 0;
 }
+/* ---------------- service requests (customer → dashboard) ---------------- */
+function serviceButtonsHtml() {
+  return '<div class="service-title">Need something?</div><div class="service-btns">' +
+    SERVICE_TYPES.map(t => '<button class="btn service-btn" data-service="' + t + '">' + t + '</button>').join('') +
+    '</div><div class="service-note muted" hidden></div>';
+}
+function wireServiceButtons(root) {
+  $$('[data-service]', root).forEach(b => b.addEventListener('click', () => requestService(b.dataset.service, root)));
+}
+function requestService(type, root) {
+  if (!customerTable) return;
+  const req = {
+    id: online ? newUuid() : uid('r'), tableId: customerTable.id, type,
+    status: 'New', createdAt: new Date().toISOString(), doneAt: null,
+  };
+  state.requests.push(req);
+  save();
+  // If the Supabase insert fails (table not created yet) the request simply
+  // stays in state/localStorage, so the flow still works in demo mode.
+  persistRequestInsert(req);
+  lastServiceNote = SERVICE_CONFIRM[type] || 'Request sent.';
+  const note = $('.service-note', root);
+  if (note) { note.textContent = lastServiceNote; note.hidden = false; }
+}
 function placeOrder() {
   const err = $('#order-error');
   const showErr = (msg) => { err.textContent = msg; err.hidden = false; };
@@ -813,6 +1140,7 @@ function placeOrder() {
   if (!cartCount()) return showErr('Your cart is empty. Add at least one dish.');
   if (!/^[0-9]{3}$/.test(pin)) return showErr('Enter the 3-digit Table PIN from your table stand.');
   if (pin !== customerTable.pin) return showErr('Wrong PIN. Ask your waiter for the correct 3-digit PIN for ' + customerTable.name + '.');
+  pinUnlocked = true; // the table session is now unlocked: service buttons appear
   const items = Object.entries(cart).map(([id, qty]) => {
     const m = itemById(id);
     return { id, name: m.name, price: m.price, qty };
@@ -830,6 +1158,8 @@ function placeOrder() {
   $('#confirm-order-no').textContent = order.number;
   $('#confirm-table').textContent = customerTable.name;
   $('#confirm-summary').textContent = items.map(i => i.name + ' ×' + i.qty).join(', ') + ' — Total ' + fmt(orderItemsTotal(order));
+  const cs = $('#confirm-service');
+  if (cs) { cs.innerHTML = serviceButtonsHtml(); wireServiceButtons(cs); }
   showCustPage('confirm');
   renderCustomer();
 }
@@ -860,6 +1190,21 @@ function wireCustomerEvents() {
   $('#btn-back-admin').addEventListener('click', () => { location.href = location.pathname; });
 }
 function wireAdminEvents() {
+  const soundBtn = $('#btn-sound');
+  const updateSoundBtn = () => {
+    soundBtn.textContent = soundOn ? 'Sound: On' : 'Sound: Off';
+    soundBtn.setAttribute('aria-pressed', String(soundOn));
+  };
+  updateSoundBtn();
+  soundBtn.addEventListener('click', () => {
+    soundOn = !soundOn;
+    try { localStorage.setItem('qrdine-sound', soundOn ? 'on' : 'off'); } catch (e) {}
+    updateSoundBtn();
+    if (soundOn) { armSound(); playChime(); } // audible confirmation
+  });
+  // Arm audio on the owner's first click/tap (browsers block sound before
+  // any user gesture).
+  document.addEventListener('pointerdown', armSound, { once: true });
   $$('#main-nav button').forEach(b => b.addEventListener('click', () => showView(b.dataset.view)));
   $('#btn-customer-view').addEventListener('click', () => openTablePickerFor());
   $('#picker-close').addEventListener('click', () => { $('#table-picker').hidden = true; });
@@ -870,13 +1215,16 @@ function wireAdminEvents() {
     const price = Math.max(1, Math.round(Number($('#mf-price').value) || 0));
     const category = $('#mf-category').value || categories()[0] || 'Tandoor Se';
     const veg = $('#mf-veg').checked, special = $('#mf-special').checked;
+    const image = $('#mf-image').value.trim();
+    const spicy = $('#mf-spicy').value;
+    const tags = $('#mf-tags').value.split(',').map(t => t.trim()).filter(Boolean).join(', ');
     if (!name || !price) return;
     if (editingMenuId) {
       const m = itemById(editingMenuId);
-      Object.assign(m, { name, price, category, veg, special });
+      Object.assign(m, { name, price, category, veg, special, image, spicy, tags });
       save(); persistMenu(m);
     } else {
-      const m = { id: uid('m'), name, price, category, veg, special, available: true };
+      const m = { id: uid('m'), name, price, category, veg, special, available: true, image, spicy, tags };
       state.menu.push(m);
       save(); persistMenu(m);
     }
@@ -895,7 +1243,7 @@ function wireAdminEvents() {
     save(); persistTable(t); e.target.reset(); renderTablesAdmin();
   });
   $$('[data-ofilter]').forEach(b => b.addEventListener('click', () => { orderFilter = b.dataset.ofilter; renderOrders(); }));
-  $('#bill-table').addEventListener('change', (e) => { billTableId = e.target.value; billDiscount = { mode: 'percent', value: 0 }; billExtra = 0; renderBillArea(); });
+  $('#bill-table').addEventListener('change', (e) => { billTableId = e.target.value; billDiscount = { mode: 'percent', value: 0 }; billExtra = 0; splitN = 0; renderBillArea(); });
   $('#btn-print-stands').addEventListener('click', printStands);
   $('#settings-form').addEventListener('submit', (e) => {
     e.preventDefault();

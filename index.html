@@ -43,10 +43,11 @@
       <span class="brand-text">Bhukhad Bachelors<small>Restaurant Manager</small></span>
     </div>
     <nav id="main-nav">
-      <button data-view="dashboard" class="active">Dashboard</button>
+      <button data-view="dashboard" class="active">Dashboard <span class="badge" id="requests-badge" hidden></span></button>
       <button data-view="menu">Menu Management</button>
       <button data-view="tables">Tables</button>
       <button data-view="orders">Orders <span class="badge" id="orders-badge" hidden></span></button>
+      <button data-view="kitchen">Kitchen</button>
       <button data-view="billing">Billing</button>
       <button data-view="analytics">Analytics</button>
       <button data-view="qrcodes">QR Codes</button>
@@ -64,6 +65,7 @@
     <header class="topbar">
       <h1 id="view-title">Dashboard</h1>
       <div class="topbar-right">
+        <button class="btn btn-sm" id="btn-sound" aria-pressed="true">Sound: On</button>
         <span id="clock"></span>
         <span class="live-dot" title="Live sync"></span><span class="live-label" id="sync-label">Connecting…</span>
       </div>
@@ -71,11 +73,18 @@
 
     <!-- DASHBOARD -->
     <section class="view active" id="view-dashboard">
+      <div id="spotlight" class="spotlight" hidden></div>
       <div class="stat-row" id="dash-stats"></div>
+      <h2>Today's Highlights</h2>
+      <div id="dash-highlights"></div>
       <h2>Tables</h2>
       <div class="table-grid" id="table-grid"></div>
       <h2>Incoming Orders</h2>
       <div id="orders-feed" class="feed"></div>
+      <h2>Service Requests</h2>
+      <div id="requests-feed" class="feed"></div>
+      <h2>Live Activity</h2>
+      <div id="activity-feed" class="feed"></div>
     </section>
 
     <!-- MENU MANAGEMENT -->
@@ -89,6 +98,11 @@
           <label>Category
             <select id="mf-category"></select>
           </label>
+          <label>Photo URL <input id="mf-image" type="url" maxlength="300" placeholder="https://… (dish photo)"></label>
+          <label>Spicy level
+            <select id="mf-spicy"><option>None</option><option>Mild</option><option>Medium</option><option>Hot</option></select>
+          </label>
+          <label>Tags (comma-separated) <input id="mf-tags" maxlength="120" placeholder="e.g. Bestseller, Chef's Special"></label>
           <label class="check">Veg <input type="checkbox" id="mf-veg" checked></label>
           <label class="check">Chef's Special <input type="checkbox" id="mf-special"></label>
           <div class="form-actions">
@@ -138,6 +152,13 @@
       <div id="orders-list"></div>
     </section>
 
+    <!-- KITCHEN -->
+    <section class="view" id="view-kitchen">
+      <h2>Kitchen</h2>
+      <p class="muted">Only New and Preparing orders. Tap the big button to move an order to the next stage.</p>
+      <div id="kitchen-list"></div>
+    </section>
+
     <!-- BILLING -->
     <section class="view" id="view-billing">
       <h2>Billing</h2>
@@ -153,17 +174,22 @@
     <section class="view" id="view-analytics">
       <h2>Analytics</h2>
       <div class="stat-row" id="analytics-stats"></div>
+      <div class="card"><h3>Orders by Hour — Today</h3><div id="hourly-chart"></div></div>
       <div class="grid-2">
-        <div class="card"><h3>Top Selling Items</h3><div id="top-items"></div></div>
-        <div class="card"><h3>Orders per Table</h3><div id="per-table"></div></div>
+        <div class="card"><h3>Top Dishes Today</h3><div id="top-today"></div></div>
+        <div class="card"><h3>Top Selling Items · All Time</h3><div id="top-items"></div></div>
       </div>
-      <div class="card"><h3>Recent Paid Orders</h3><div id="recent-paid"></div></div>
+      <div class="grid-2">
+        <div class="card"><h3>Orders per Table</h3><div id="per-table"></div></div>
+        <div class="card"><h3>Recent Paid Orders</h3><div id="recent-paid"></div></div>
+      </div>
     </section>
 
     <!-- QR CODES -->
     <section class="view" id="view-qrcodes">
       <h2>QR Codes — Table Stands</h2>
       <p class="muted">Print a stand for each table. Customers scan it to open the menu for that table. The QR opens this same app with <code>?table=N</code> — it works from wherever the app is hosted.</p>
+      <p class="muted">The same menu link also works on an <strong>NFC card or tag</strong> — write the table's menu link to the tag and a tap opens the menu; no app change is needed.</p>
       <div class="row-between">
         <button class="btn btn-primary" id="btn-print-stands">Print All Stands</button>
       </div>
@@ -205,6 +231,7 @@
   <div class="cust-body" id="cust-menu-page">
     <input id="cust-search" type="search" placeholder="Search dishes..." aria-label="Search dishes">
     <div class="cust-tabs" id="cust-tabs"></div>
+    <div id="cust-service" class="service-row" hidden></div>
     <div id="cust-items"></div>
   </div>
 
@@ -226,10 +253,11 @@
   <div class="cust-body" id="cust-confirm-page" hidden>
     <div class="card confirm-card">
       <div class="confirm-tick">✓</div>
-      <h2>Order Confirmed</h2>
-      <p>Order <strong id="confirm-order-no"></strong> for <strong id="confirm-table"></strong></p>
+      <h2>Order received</h2>
+      <p>Your order <strong id="confirm-order-no"></strong> for <strong id="confirm-table"></strong> is being prepared.</p>
       <p class="muted" id="confirm-summary"></p>
-      <p class="muted">Your food is being prepared. The waiter will bring it to your table.</p>
+      <p class="muted">The waiter will bring it to your table.</p>
+      <div id="confirm-service" class="service-row"></div>
       <button class="btn btn-primary btn-block" id="btn-new-order">Order More</button>
       <button class="btn btn-outline btn-block" id="btn-back-admin">Back to Dashboard</button>
     </div>
