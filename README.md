@@ -40,12 +40,41 @@ HTML/CSS/JS only. No build step, no framework, no account needed.
   Biryani, Desserts and Drinks & Beverages — 39 dishes. The owner can change
   any dish's photo, spicy level or tags from Menu Management.
 - **Orders** — live list, statuses New → Preparing → Served → Paid.
+  **Live order tracking:** the customer confirmation page shows a 4-step
+  timeline (Order placed → Preparing → Served → Bill settled) with each
+  step's real time, updating live with no refresh when the kitchen or
+  owner advances the order (Supabase Realtime, or the cross-tab path in
+  offline demo mode). A cancelled order shows a clear "Order cancelled"
+  state instead. While an order is open, the customer menu shows a
+  **Track Order — ORD-XXXX · status** button that opens the same tracking
+  view. Timestamps are stored in `qrdine_orders.preparing_at` /
+  `served_at` (idempotent `ALTER TABLE` in `supabase-schema.sql`); the
+  app still works if those columns do not exist yet, keeping the times
+  locally. No ETA is ever invented — only real statuses and real times.
+  **One name + one mobile = one active order:** placing an order while
+  an open (New / Preparing / Served) order exists with the same name and
+  mobile (name trimmed + lowercased, phone digits only, last 10 digits,
+  so +91 98765 43210 matches 9876543210) is blocked with "This name and
+  mobile already have an open order" and the existing order is shown
+  instead. A Paid (settled) order does not block a new order, and an
+  empty phone field never blocks (phone stays optional).
   Orders with a phone number get a **WhatsApp** button that opens a chat
   to the customer with the order number and status prefilled. Every order
   also has a **Message** button that opens a real-time **in-app chat** with
   the customer (new table `qrdine_messages`); the customer replies from the
   order-confirmation page, and the owner sees a badge on the order when a
   new customer message arrives.
+- **Customer reviews** — once the bill is settled (order status Paid, all 4
+  tracking steps done), a review section appears right on the customer's
+  confirmation page: tap 1–5 gold stars, an optional comment, name
+  prefilled from the order (editable). After submitting, the page shows
+  "Thank you for your review!" instead of the form — one review per order,
+  so reloading never shows the form again. Reviews are stored in the new
+  table `qrdine_reviews` (and locally if the table does not exist yet).
+  The owner dashboard has a **Reviews** view listing every review newest
+  first (stars, comment, customer, table, order number, date) with the
+  average rating and total review count at the top, computed from real
+  reviews only — "No reviews yet" when there are none.
 - **Kitchen** — New and Preparing orders as big cards with items and
   quantities; one big button moves an order to the next stage
   (New → Preparing → Served).

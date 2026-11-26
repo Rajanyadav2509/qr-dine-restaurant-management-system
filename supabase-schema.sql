@@ -7,10 +7,10 @@
 --   2. Paste this whole file and press Run
 --   3. Confirm the "Schema created" notice, then check Table Editor shows
 --      qrdine_tables, qrdine_menu, qrdine_orders, qrdine_settings,
---      qrdine_requests, qrdine_messages
+--      qrdine_requests, qrdine_messages, qrdine_reviews
 --
 -- SECURITY NOTE — DEMO-GRADE POLICIES:
---   The policies below let the anon (public) key read/write all six tables.
+--   The policies below let the anon (public) key read/write all seven tables.
 --   That is intentional for this demo: the customer menu must write orders
 --   with NO login, and the owner dashboard must read/write from any device.
 --   BEFORE real production use, tighten them: e.g. allow anon INSERT only on
@@ -64,6 +64,13 @@ create table if not exists public.qrdine_orders (
   settled_at    timestamptz
 );
 
+-- Order tracking timestamps (added later; idempotent — safe to re-run).
+-- The app records preparing_at / served_at when the kitchen advances an
+-- order, and still works if these columns do not exist yet (it keeps the
+-- times locally and retries order writes without them).
+alter table public.qrdine_orders add column if not exists preparing_at timestamptz;
+alter table public.qrdine_orders add column if not exists served_at timestamptz;
+
 create table if not exists public.qrdine_settings (
   id               integer primary key,
   restaurant_name  text not null,
@@ -90,6 +97,19 @@ create table if not exists public.qrdine_messages (
   created_at   timestamptz not null default now()
 );
 
+/* Customer reviews — one per order. Shown on the customer's confirmation
+   page only after the bill is settled (order status Paid); listed in the
+   owner's Reviews view. */
+create table if not exists public.qrdine_reviews (
+  id            uuid primary key default gen_random_uuid(),
+  order_number  text not null,
+  table_id      text not null,
+  customer_name text,
+  rating        integer not null check (rating between 1 and 5),
+  comment       text,
+  created_at    timestamptz not null default now()
+);
+
 create index if not exists qrdine_orders_table_id_idx   on public.qrdine_orders (table_id);
 create index if not exists qrdine_orders_status_idx     on public.qrdine_orders (status);
 create index if not exists qrdine_orders_created_at_idx on public.qrdine_orders (created_at desc);
@@ -98,6 +118,8 @@ create index if not exists qrdine_requests_status_idx     on public.qrdine_reque
 create index if not exists qrdine_requests_created_at_idx on public.qrdine_requests (created_at);
 create index if not exists qrdine_messages_order_idx    on public.qrdine_messages (order_number);
 create index if not exists qrdine_messages_created_at_idx on public.qrdine_messages (created_at);
+create index if not exists qrdine_reviews_order_idx     on public.qrdine_reviews (order_number);
+create index if not exists qrdine_reviews_created_at_idx on public.qrdine_reviews (created_at desc);
 
 -- ---------------- Row Level Security (demo-grade open policies) ----------------
 
@@ -107,6 +129,7 @@ alter table public.qrdine_orders  enable row level security;
 alter table public.qrdine_settings enable row level security;
 alter table public.qrdine_requests enable row level security;
 alter table public.qrdine_messages enable row level security;
+alter table public.qrdine_reviews enable row level security;
 
 -- Drop first so re-running this file is safe.
 drop policy if exists "demo: all access" on public.qrdine_tables;
@@ -115,6 +138,7 @@ drop policy if exists "demo: all access" on public.qrdine_orders;
 drop policy if exists "demo: all access" on public.qrdine_settings;
 drop policy if exists "demo: all access" on public.qrdine_requests;
 drop policy if exists "demo: all access" on public.qrdine_messages;
+drop policy if exists "demo: all access" on public.qrdine_reviews;
 
 create policy "demo: all access" on public.qrdine_tables
   for all to anon, authenticated using (true) with check (true);
@@ -127,6 +151,8 @@ create policy "demo: all access" on public.qrdine_settings
 create policy "demo: all access" on public.qrdine_requests
   for all to anon, authenticated using (true) with check (true);
 create policy "demo: all access" on public.qrdine_messages
+  for all to anon, authenticated using (true) with check (true);
+create policy "demo: all access" on public.qrdine_reviews
   for all to anon, authenticated using (true) with check (true);
 
 -- ---------------- Table privileges (required!) ----------------
@@ -142,6 +168,7 @@ grant select, insert, update, delete on public.qrdine_orders to anon, authentica
 grant select, insert, update, delete on public.qrdine_settings to anon, authenticated;
 grant select, insert, update, delete on public.qrdine_requests to anon, authenticated;
 grant select, insert, update, delete on public.qrdine_messages to anon, authenticated;
+grant select, insert, update, delete on public.qrdine_reviews to anon, authenticated;
 
 -- ---------------- Realtime ----------------
 -- The dashboard subscribes to these tables so every device updates live.
@@ -166,6 +193,9 @@ begin
   end if;
   if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'qrdine_messages') then
     alter publication supabase_realtime add table public.qrdine_messages;
+  end if;
+  if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'qrdine_reviews') then
+    alter publication supabase_realtime add table public.qrdine_reviews;
   end if;
 end $$;
 

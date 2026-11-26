@@ -50,6 +50,7 @@
       <button data-view="kitchen">Kitchen</button>
       <button data-view="billing">Billing</button>
       <button data-view="analytics">Analytics</button>
+      <button data-view="reviews">Reviews</button>
       <button data-view="qrcodes">QR Codes</button>
       <button data-view="settings">Settings</button>
     </nav>
@@ -185,6 +186,13 @@
       </div>
     </section>
 
+    <!-- REVIEWS -->
+    <section class="view" id="view-reviews">
+      <h2>Customer Reviews</h2>
+      <div id="reviews-summary"></div>
+      <div id="reviews-list"></div>
+    </section>
+
     <!-- QR CODES -->
     <section class="view" id="view-qrcodes">
       <h2>QR Codes — Table Stands</h2>
@@ -255,7 +263,10 @@
     <div class="card confirm-card">
       <div class="confirm-tick">✓</div>
       <h2>Order received</h2>
-      <p>Your order <strong id="confirm-order-no"></strong> for <strong id="confirm-table"></strong> is being prepared.</p>
+      <p id="confirm-status-line">Your order <strong id="confirm-order-no"></strong> for <strong id="confirm-table"></strong> <span id="confirm-status-text"></span></p>
+      <div id="confirm-duplicate-note" class="dup-note" hidden></div>
+      <div id="tracking-cancelled" class="tracking-cancelled" hidden>✕ Order cancelled — no payment is due for this order. Start a new order below if you like.</div>
+      <div id="tracking-timeline" class="tracking" aria-label="Order tracking"></div>
       <p class="muted" id="confirm-summary"></p>
       <p class="muted">The waiter will bring it to your table.</p>
       <div id="confirm-service" class="service-row"></div>
@@ -267,6 +278,7 @@
           <button class="btn btn-primary" id="btn-confirm-chat-send">Send</button>
         </div>
       </div>
+      <div id="review-section"></div>
       <button class="btn btn-primary btn-block" id="btn-new-order">Order More</button>
       <button class="btn btn-outline btn-block" id="btn-back-admin">Back to Dashboard</button>
     </div>

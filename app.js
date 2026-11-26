@@ -76,6 +76,7 @@ function seedState() {
     orders: [],
     requests: [],
     messages: [], // owner ↔ customer in-app chat, per order number
+    reviews: [],  // customer reviews, one per order number (after bill settled)
     msgSeen: {},  // order number -> ISO time the owner last opened its chat
     activity: [], // live activity feed — session history, local only (no DB table)
     nextOrderNo: 1001,
@@ -92,6 +93,7 @@ function loadLocal() {
     if (s.settings && s.settings.upiId === OLD_DEMO_UPI) { s.settings.upiId = RESTAURANT_UPI; try { localStorage.setItem(LS_KEY, JSON.stringify(s)); } catch (e) {} }
     if (!Array.isArray(s.requests)) s.requests = [];
     if (!Array.isArray(s.messages)) s.messages = [];
+    if (!Array.isArray(s.reviews)) s.reviews = [];
     if (!s.msgSeen || typeof s.msgSeen !== 'object') s.msgSeen = {};
     if (!Array.isArray(s.activity)) s.activity = [];
     s.menu.forEach(m => {
@@ -270,6 +272,11 @@ function rowToOrder(r) {
     paymentMode: r.payment_mode || undefined,
     finalTotal: r.final_total != null ? Number(r.final_total) : undefined,
     settledAt: r.settled_at || undefined,
+    /* Tracking timestamps — added by a later schema migration. Rows written
+       before the columns exist have no value here; callers keep any locally
+       observed time instead (see applyOrderRow / loadFromSupabase). */
+    preparingAt: r.preparing_at || undefined,
+    servedAt: r.served_at || undefined,
   };
 }
 function orderToRow(o) {
@@ -282,6 +289,7 @@ function orderToRow(o) {
     subtotal: total, discount: 0, extra: 0, grand: total,
     final_total: o.finalTotal != null ? o.finalTotal : null,
     created_at: o.createdAt, settled_at: o.settledAt || null,
+    preparing_at: o.preparingAt || null, served_at: o.servedAt || null,
   };
 }
 function rowToMenu(r) {
@@ -330,6 +338,22 @@ function rowToMessage(r) {
 }
 function messageToRow(m) {
   return { id: m.id, order_number: m.orderNumber, table_id: m.tableId, sender: m.sender, text: m.text, created_at: m.createdAt };
+}
+/* Customer reviews — one per order number, given after the bill is settled. */
+function rowToReview(r) {
+  return { id: r.id, orderNumber: r.order_number, tableId: r.table_id, customerName: r.customer_name || '', rating: Number(r.rating), comment: r.comment || '', createdAt: r.created_at };
+}
+function reviewToRow(r) {
+  return { id: r.id, order_number: r.orderNumber, table_id: r.tableId, customer_name: r.customerName || null, rating: r.rating, comment: r.comment || null, created_at: r.createdAt };
+}
+function reviewFor(number) {
+  return (state.reviews || []).find(r => r.orderNumber === number) || null;
+}
+/* Star display: filled gold stars for the rating, empty ones after it. */
+function starsHtml(rating) {
+  let out = '';
+  for (let i = 1; i <= 5; i++) out += '<span class="star' + (i <= rating ? ' on' : '') + '">★</span>';
+  return '<span class="stars" aria-label="' + rating + ' out of 5 stars">' + out + '</span>';
 }
 function messagesFor(number) {
   return (state.messages || []).filter(m => m.orderNumber === number)
@@ -397,13 +421,14 @@ async function initSupabase() {
 }
 
 async function loadFromSupabase() {
-  const [sRes, mRes, tRes, oRes, qRes, gRes] = await Promise.all([
+  const [sRes, mRes, tRes, oRes, qRes, gRes, vRes] = await Promise.all([
     sb.from('qrdine_settings').select('*').eq('id', 1).maybeSingle(),
     sb.from('qrdine_menu').select('*').order('id'),
     sb.from('qrdine_tables').select('*').order('id'),
     sb.from('qrdine_orders').select('*').order('created_at', { ascending: false }).limit(500),
     sb.from('qrdine_requests').select('*').order('created_at', { ascending: true }).limit(500),
     sb.from('qrdine_messages').select('*').order('created_at', { ascending: true }).limit(500),
+    sb.from('qrdine_reviews').select('*').order('created_at', { ascending: false }).limit(500),
   ]);
   if (sRes.error) throw sRes.error;
   if (mRes.error) throw mRes.error;
@@ -412,7 +437,14 @@ async function loadFromSupabase() {
   if (sRes.data) state.settings = rowToSettings(sRes.data);
   if (Array.isArray(mRes.data) && mRes.data.length) state.menu = mRes.data.map(rowToMenu);
   if (Array.isArray(tRes.data) && tRes.data.length) state.tables = tRes.data.map(rowToTable);
+  /* Keep locally observed tracking times for rows whose Supabase row has
+     no preparing_at / served_at yet (columns not migrated yet). */
+  const localTimes = new Map(state.orders.map(o => [o.id, { preparingAt: o.preparingAt, servedAt: o.servedAt, settledAt: o.settledAt }]));
   state.orders = (oRes.data || []).map(rowToOrder);
+  state.orders.forEach(o => {
+    const t = localTimes.get(o.id);
+    if (t) { if (!o.preparingAt && t.preparingAt) o.preparingAt = t.preparingAt; if (!o.servedAt && t.servedAt) o.servedAt = t.servedAt; if (!o.settledAt && t.settledAt) o.settledAt = t.settledAt; }
+  });
   // The requests table may not exist yet (schema not re-run): keep the
   // local requests instead of failing the whole load.
   if (qRes.error) console.warn('QR Dine: qrdine_requests not available yet — service requests stay local.', qRes.error.message);
@@ -420,6 +452,9 @@ async function loadFromSupabase() {
   // Same for the messages table.
   if (gRes.error) console.warn('QR Dine: qrdine_messages not available yet — chat messages stay local.', gRes.error.message);
   else state.messages = (gRes.data || []).map(rowToMessage);
+  // Same for the reviews table.
+  if (vRes.error) console.warn('QR Dine: qrdine_reviews not available yet — reviews stay local.', vRes.error.message);
+  else state.reviews = (vRes.data || []).map(rowToReview);
   deriveNextOrderNo();
   saveLocal();
 }
@@ -428,6 +463,15 @@ async function loadFromSupabase() {
    so our own writes echoing back never duplicate rows. */
 function applyOrderRow(r) {
   const o = rowToOrder(r);
+  const prev = state.orders.find(x => x.id === o.id);
+  if (prev) {
+    /* Fallback when the tracking columns do not exist yet in Supabase:
+       keep the locally observed times instead of wiping them with
+       undefined from the row. */
+    if (!o.preparingAt && prev.preparingAt) o.preparingAt = prev.preparingAt;
+    if (!o.servedAt && prev.servedAt) o.servedAt = prev.servedAt;
+    if (!o.settledAt && prev.settledAt) o.settledAt = prev.settledAt;
+  }
   const i = state.orders.findIndex(x => x.id === o.id);
   if (i >= 0) state.orders[i] = o; else state.orders.push(o);
   deriveNextOrderNo();
@@ -453,6 +497,12 @@ function applyMessageRow(r) {
   if (!Array.isArray(state.messages)) state.messages = [];
   const i = state.messages.findIndex(x => x.id === m.id);
   if (i >= 0) state.messages[i] = m; else state.messages.push(m);
+}
+function applyReviewRow(r) {
+  const v = rowToReview(r);
+  if (!Array.isArray(state.reviews)) state.reviews = [];
+  const i = state.reviews.findIndex(x => x.id === v.id);
+  if (i >= 0) state.reviews[i] = v; else state.reviews.push(v);
 }
 function subscribeRealtime() {
   if (!sb || liveSubscribed) return;
@@ -491,6 +541,12 @@ function subscribeRealtime() {
         renderAll();
       } else if (payload.new) { applyMessageRow(payload.new); saveLocal(); renderAll(); }
     })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'qrdine_reviews' }, (payload) => {
+      if (payload.eventType === 'DELETE') {
+        state.reviews = state.reviews.filter(x => x.id !== payload.old.id);
+        renderAll();
+      } else if (payload.new) { applyReviewRow(payload.new); saveLocal(); renderAll(); }
+    })
     .subscribe((status) => { updateSyncBadge(status === 'SUBSCRIBED'); });
 }
 
@@ -503,9 +559,27 @@ function sbSafe(fn) {
   try { p = fn(); } catch (e) { console.warn('QR Dine: Supabase write failed', e && e.message ? e.message : e); return Promise.resolve(null); }
   return Promise.resolve(p).catch(e => { console.warn('QR Dine: Supabase write failed', e && e.message ? e.message : e); return null; });
 }
-function persistOrderInsert(o) { return sbSafe(() => sb.from('qrdine_orders').insert(orderToRow(o))); }
-function persistOrderUpdate(o) {
-  return sbSafe(() => sb.from('qrdine_orders').update(orderToRow(o)).eq('id', o.id));
+function stripTrackingCols(row) {
+  const r = Object.assign({}, row);
+  delete r.preparing_at; delete r.served_at;
+  return r;
+}
+/* If the tracking columns do not exist in Supabase yet, an insert/update
+   carrying them fails with "column does not exist" — retry without them so
+   the order/status change itself still saves (times stay local only). */
+async function persistOrderInsert(o) {
+  const res = await sbSafe(() => sb.from('qrdine_orders').insert(orderToRow(o)));
+  if (res && res.error && /preparing_at|served_at/.test(res.error.message || '')) {
+    await sbSafe(() => sb.from('qrdine_orders').insert(stripTrackingCols(orderToRow(o))));
+  }
+  return res;
+}
+async function persistOrderUpdate(o) {
+  const res = await sbSafe(() => sb.from('qrdine_orders').update(orderToRow(o)).eq('id', o.id));
+  if (res && res.error && /preparing_at|served_at/.test(res.error.message || '')) {
+    await sbSafe(() => sb.from('qrdine_orders').update(stripTrackingCols(orderToRow(o))).eq('id', o.id));
+  }
+  return res;
 }
 function persistTable(t) { return sbSafe(() => sb.from('qrdine_tables').upsert(tableToRow(t))); }
 function persistTableDelete(id) { return sbSafe(() => sb.from('qrdine_tables').delete().eq('id', id)); }
@@ -522,12 +596,16 @@ function persistRequestUpdate(r) {
    message stays in state/localStorage and still arrives on other tabs
    via the storage-event path. */
 function persistMessageInsert(m) { return sbSafe(() => sb.from('qrdine_messages').insert(messageToRow(m))); }
+/* Customer reviews: same fallback — if the table does not exist yet, the
+   review stays in state/localStorage and still shows as submitted. */
+function persistReviewInsert(r) { return sbSafe(() => sb.from('qrdine_reviews').insert(reviewToRow(r))); }
 async function persistResetDemo() {
   if (!online || !sb) return;
   const seed = seedState();
   await sbSafe(() => sb.from('qrdine_orders').delete().neq('id', '00000000-0000-0000-0000-000000000000'));
   await sbSafe(() => sb.from('qrdine_requests').delete().neq('id', '00000000-0000-0000-0000-000000000000'));
   await sbSafe(() => sb.from('qrdine_messages').delete().neq('id', '00000000-0000-0000-0000-000000000000'));
+  await sbSafe(() => sb.from('qrdine_reviews').delete().neq('id', '00000000-0000-0000-0000-000000000000'));
   await sbSafe(() => sb.from('qrdine_menu').delete().neq('id', ''));
   await sbSafe(() => sb.from('qrdine_tables').delete().neq('id', ''));
   await sbSafe(() => sb.from('qrdine_menu').insert(seed.menu.map(menuToRow)));
@@ -607,7 +685,7 @@ function playChime() {
 }
 
 /* ---------------- navigation ---------------- */
-const VIEW_TITLES = { dashboard: 'Dashboard', menu: 'Menu Management', tables: 'Tables', orders: 'Orders', kitchen: 'Kitchen', billing: 'Billing', analytics: 'Analytics', qrcodes: 'QR Codes', settings: 'Settings' };
+const VIEW_TITLES = { dashboard: 'Dashboard', menu: 'Menu Management', tables: 'Tables', orders: 'Orders', kitchen: 'Kitchen', billing: 'Billing', analytics: 'Analytics', reviews: 'Reviews', qrcodes: 'QR Codes', settings: 'Settings' };
 let currentView = 'dashboard';
 function showView(name) {
   currentView = name;
@@ -619,7 +697,7 @@ function showView(name) {
 function renderView(name) {
   ({ dashboard: renderDashboard, menu: renderMenuAdmin, tables: renderTablesAdmin,
      orders: renderOrders, kitchen: renderKitchen, billing: renderBilling, analytics: renderAnalytics,
-     qrcodes: renderQrStands, settings: renderSettings }[name] || (() => {}))();
+     reviews: renderReviews, qrcodes: renderQrStands, settings: renderSettings }[name] || (() => {}))();
 }
 function renderAll() {
   $('#side-rest-name').textContent = state.settings.name;
@@ -883,6 +961,9 @@ let orderFilter = '';
 function advanceOrder(o) {
   const from = o.status;
   o.status = { 'New': 'Preparing', 'Preparing': 'Served', 'Served': 'Paid' }[o.status];
+  const now = new Date().toISOString();
+  if (o.status === 'Preparing' && !o.preparingAt) o.preparingAt = now;
+  if (o.status === 'Served' && !o.servedAt) o.servedAt = now;
   if (o.status === 'Paid') { o.finalTotal = orderItemsTotal(o); o.settledAt = new Date().toISOString(); o.paymentMode = o.paymentMode || 'Cash'; }
   if (feedReady && from !== o.status) logActivity('status', 'order-status:' + o.id + ':' + o.status, activityTextStatus(o));
   refreshTableStatus(o.tableId); save(); persistOrderUpdate(o);
@@ -1170,6 +1251,32 @@ function renderTopToday() {
   ).join('') : '<p class="muted">No dishes sold today yet.</p>';
 }
 
+/* ---------------- owner reviews view ----------------
+   All customer reviews, newest first, with a summary computed from real
+   reviews only (average rating + total count). */
+function renderReviews() {
+  const list = (state.reviews || []).slice().sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  const sumEl = $('#reviews-summary');
+  const listEl = $('#reviews-list');
+  if (!sumEl || !listEl) return;
+  if (!list.length) {
+    sumEl.innerHTML = '<p class="muted">No reviews yet — reviews from customers will appear here after their bill is settled.</p>';
+    listEl.innerHTML = '';
+    return;
+  }
+  const avg = list.reduce((s, r) => s + r.rating, 0) / list.length;
+  sumEl.innerHTML = '<div class="stat-row"><div class="stat"><div class="stat-label">Average Rating</div><div class="stat-value">' + avg.toFixed(1) + ' ★</div></div>' +
+    '<div class="stat"><div class="stat-label">Total Reviews</div><div class="stat-value">' + list.length + '</div></div></div>';
+  listEl.innerHTML = list.map(r => {
+    const t = tableById(r.tableId);
+    return '<div class="card review-card"><div class="row-between"><div>' + starsHtml(r.rating) +
+      ' <strong>' + esc(r.customerName || 'Customer') + '</strong></div>' +
+      '<span class="muted">' + new Date(r.createdAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) + '</span></div>' +
+      (r.comment ? '<p class="review-comment">“' + esc(r.comment) + '”</p>' : '<p class="muted">No comment.</p>') +
+      '<p class="muted">' + esc(t ? t.name : '') + ' · ' + esc(r.orderNumber) + '</p></div>';
+  }).join('');
+}
+
 /* ---------------- QR stands ---------------- */
 function renderQrStands() {
   $('#qr-stands').innerHTML = state.tables.map(t =>
@@ -1228,6 +1335,104 @@ function cartCount() { return Object.values(cart).reduce((s, q) => s + q, 0); }
 function cartTotal() {
   return Object.entries(cart).reduce((s, [id, q]) => { const m = itemById(id); return s + (m ? m.price * q : 0); }, 0);
 }
+/* ---------------- live order tracking (customer) ----------------
+   Timeline: Order placed → Preparing → Served → Bill settled.
+   Times are real only: placed = createdAt, preparing = preparingAt,
+   served = servedAt, settled = settledAt. A step with no known time shows
+   no time — never an invented ETA. Updates arrive via Supabase Realtime
+   (orders subscription) when online, and via the cross-tab storage-event
+   path in offline demo mode; both call renderAll() → renderCustomer() →
+   renderTracking(), so the page moves without a refresh. */
+const TRACK_STEPS = [
+  { key: 'New', label: 'Order placed' },
+  { key: 'Preparing', label: 'Preparing' },
+  { key: 'Served', label: 'Served' },
+  { key: 'Paid', label: 'Bill settled' },
+];
+const TRACK_STATUS_TEXT = {
+  New: 'received — the kitchen will start preparing it.',
+  Preparing: 'is being prepared.',
+  Served: 'has been served. Enjoy your meal!',
+  Paid: 'is settled. Thank you, visit again!',
+  Cancelled: 'was cancelled.',
+};
+function fmtTime(iso) {
+  if (!iso) return '';
+  try { return new Date(iso).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }); }
+  catch (e) { return ''; }
+}
+function trackingTimes(o) { return [o.createdAt, o.preparingAt, o.servedAt, o.settledAt]; }
+function renderTracking() {
+  const el = $('#tracking-timeline');
+  const cancelledEl = $('#tracking-cancelled');
+  const line = $('#confirm-status-line');
+  if (!el) return;
+  const o = state.orders.find(x => x.number === lastOrderNumber);
+  if (!o) { el.innerHTML = ''; el.hidden = true; if (cancelledEl) cancelledEl.hidden = true; renderReviewSection(); return; }
+  if (line) {
+    const st = $('#confirm-status-text');
+    if (st) st.textContent = TRACK_STATUS_TEXT[o.status] || '';
+  }
+  if (o.status === 'Cancelled') {
+    el.hidden = true; el.innerHTML = '';
+    if (cancelledEl) cancelledEl.hidden = false;
+    renderReviewSection();
+    return;
+  }
+  if (cancelledEl) cancelledEl.hidden = true;
+  el.hidden = false;
+  const idx = TRACK_STEPS.findIndex(s => s.key === o.status);
+  const times = trackingTimes(o);
+  el.innerHTML = TRACK_STEPS.map((s, i) => {
+    const done = o.status === 'Paid' || i < idx;
+    const current = i === idx && o.status !== 'Paid';
+    const stateCls = done ? 'done' : (current ? 'current' : 'upcoming');
+    const mark = done ? '✓' : String(i + 1);
+    const t = fmtTime(times[i]);
+    return '<div class="track-step ' + stateCls + '">' +
+      '<span class="track-dot" aria-hidden="true">' + mark + '</span>' +
+      '<span class="track-body"><span class="track-label">' + s.label + '</span>' +
+      (t ? '<span class="track-time">' + t + '</span>' : '') + '</span>' +
+      (current ? '<span class="track-now">Now</span>' : '') + '</div>';
+  }).join('');
+  renderReviewSection();
+}
+/* Fill the confirmation page for an existing order and open its tracking
+   view. `dupNote` is shown only when the customer was blocked as a
+   duplicate (see placeOrder). */
+function showTrackingFor(o, dupNote) {
+  lastOrderNumber = o.number;
+  const t = tableById(o.tableId);
+  $('#confirm-order-no').textContent = o.number;
+  $('#confirm-table').textContent = t ? t.name : '';
+  $('#confirm-summary').textContent = o.items.map(i => i.name + ' ×' + i.qty).join(', ') + ' — Total ' + fmt(orderItemsTotal(o));
+  const note = $('#confirm-duplicate-note');
+  if (note) { if (dupNote) { note.textContent = dupNote; note.hidden = false; } else note.hidden = true; }
+  const cs = $('#confirm-service');
+  if (cs) { cs.innerHTML = serviceButtonsHtml(); wireServiceButtons(cs); }
+  showCustPage('confirm');
+  renderConfirmChat();
+  renderTracking();
+}
+/* ---------------- duplicate customer prevention ----------------
+   One name + one mobile = one active order. Normalised: name trimmed +
+   lowercased, phone digits only, last 10 digits (+91 98765 43210 and
+   9876543210 are the same number). Only open orders block (New /
+   Preparing / Served); a Paid order never blocks, and an empty phone
+   cannot be checked, so it never blocks either. */
+function normCustomerName(name) { return String(name || '').trim().toLowerCase(); }
+function normPhone10(phone) {
+  const d = String(phone || '').replace(/\D/g, '');
+  return d.length >= 10 ? d.slice(-10) : d;
+}
+function findOpenDuplicateOrder(name, phone) {
+  const n = normCustomerName(name);
+  const p = normPhone10(phone);
+  if (!n || !p) return null;
+  return state.orders.find(o =>
+    (o.status === 'New' || o.status === 'Preparing' || o.status === 'Served') &&
+    normCustomerName(o.customerName) === n && normPhone10(o.phone) === p) || null;
+}
 function renderCustomer() {
   if (!customerTable) return;
   $('#cust-rest-name').textContent = state.settings.name;
@@ -1273,6 +1478,20 @@ function renderCustomer() {
   $('#cartbar-text').textContent = n + ' item' + (n === 1 ? '' : 's') + ' · ' + fmt(cartTotal());
   renderCartPage();
   renderConfirmChat();
+  renderTracking();
+  /* Track Order entry point: an open order for this table gets a banner
+     on the menu page that opens the same tracking view. */
+  const banner = $('#cust-track-banner');
+  if (banner) {
+    const open = openOrdersFor(customerTable.id).slice()
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
+    if (open) {
+      banner.hidden = false;
+      banner.innerHTML = '<button class="btn btn-primary btn-block track-btn" id="btn-track-order">Track Order — ' + esc(open.number) + ' · ' + esc(open.status) + '</button>';
+      const btn = $('#btn-track-order');
+      if (btn) btn.addEventListener('click', () => showTrackingFor(open));
+    } else { banner.hidden = true; banner.innerHTML = ''; }
+  }
 }
 function renderCartPage() {
   const entries = Object.entries(cart);
@@ -1403,6 +1622,79 @@ function renderConfirmChat() {
     : '<p class="chat-empty">No messages yet — the restaurant will reply here live.</p>';
   list.scrollTop = list.scrollHeight;
 }
+/* ---------------- customer reviews ----------------
+   The review section lives on the confirmation page and appears only
+   once the bill is settled (order status Paid — all 4 timeline steps
+   done). One review per order: if a review already exists for the order
+   number, the thank-you state shows instead of the form, even after a
+   reload. Drafts (stars / name / comment) survive re-renders the same
+   way chat drafts do. */
+let reviewDrafts = {}; // order number -> { rating, name, comment }
+function renderReviewSection() {
+  const box = $('#review-section');
+  if (!box) return;
+  const o = state.orders.find(x => x.number === lastOrderNumber);
+  if (!o || o.status !== 'Paid') { box.innerHTML = ''; return; }
+  const existing = reviewFor(o.number);
+  if (existing) {
+    box.innerHTML = '<div class="card review-box review-thanks"><div class="review-thanks-tick">✓</div>' +
+      '<h3>Thank you for your review!</h3>' +
+      '<div class="review-stars-big">' + starsHtml(existing.rating) + '</div>' +
+      (existing.comment ? '<p class="review-their-comment">“' + esc(existing.comment) + '”</p>' : '') +
+      '<p class="muted">Your review helps us serve you better.</p></div>';
+    return;
+  }
+  const draft = reviewDrafts[o.number] || {};
+  const rating = draft.rating || 0;
+  const name = draft.name !== undefined ? draft.name : o.customerName;
+  const comment = draft.comment || '';
+  let starBtns = '';
+  for (let i = 1; i <= 5; i++) {
+    starBtns += '<button type="button" class="star-btn' + (i <= rating ? ' on' : '') + '" data-star="' + i + '" aria-label="' + i + ' star' + (i > 1 ? 's' : '') + '">★</button>';
+  }
+  box.innerHTML = '<div class="card review-box">' +
+    '<h3>How was your food?</h3>' +
+    '<p class="muted">Your bill is settled — tell us how we did.</p>' +
+    '<div class="star-row" id="review-stars">' + starBtns + '</div>' +
+    '<div class="review-error" id="review-error" hidden>Please tap a star to rate.</div>' +
+    '<label class="review-label">Your name <input id="review-name" maxlength="40" value="' + esc(name) + '"></label>' +
+    '<label class="review-label">Comment (optional) <textarea id="review-comment" maxlength="300" rows="3" placeholder="Tell us what you liked…">' + esc(comment) + '</textarea></label>' +
+    '<button class="btn btn-primary btn-block" id="btn-submit-review">Submit Review</button></div>';
+  $$('#review-stars [data-star]', box).forEach(b => b.addEventListener('click', () => {
+    const d = reviewDrafts[o.number] = reviewDrafts[o.number] || {};
+    d.rating = Number(b.dataset.star);
+    $$('#review-stars [data-star]', box).forEach(x => x.classList.toggle('on', Number(x.dataset.star) <= d.rating));
+    const err = $('#review-error', box); if (err) err.hidden = true;
+  }));
+  const nameInp = $('#review-name', box);
+  nameInp.addEventListener('input', () => { (reviewDrafts[o.number] = reviewDrafts[o.number] || {}).name = nameInp.value; });
+  const cmtInp = $('#review-comment', box);
+  cmtInp.addEventListener('input', () => { (reviewDrafts[o.number] = reviewDrafts[o.number] || {}).comment = cmtInp.value; });
+  $('#btn-submit-review', box).addEventListener('click', () => submitReview(o));
+}
+function submitReview(o) {
+  if (!o || o.status !== 'Paid') return;
+  if (reviewFor(o.number)) { renderReviewSection(); return; } // one review per order
+  const d = reviewDrafts[o.number] || {};
+  const rating = Number(d.rating || 0);
+  if (!rating || rating < 1 || rating > 5) {
+    const err = $('#review-error'); if (err) err.hidden = false;
+    return;
+  }
+  const name = (d.name !== undefined ? d.name : o.customerName).trim() || o.customerName;
+  const comment = (d.comment || '').trim();
+  const review = {
+    id: online ? newUuid() : uid('v'),
+    orderNumber: o.number, tableId: o.tableId, customerName: name,
+    rating, comment, createdAt: new Date().toISOString(),
+  };
+  if (!Array.isArray(state.reviews)) state.reviews = [];
+  state.reviews.push(review);
+  delete reviewDrafts[o.number];
+  save();
+  persistReviewInsert(review);
+  renderReviewSection();
+}
 function placeOrder() {
   const err = $('#order-error');
   const showErr = (msg) => { err.textContent = msg; err.hidden = false; };
@@ -1415,7 +1707,16 @@ function placeOrder() {
   if (!cartCount()) return showErr('Your cart is empty. Add at least one dish.');
   if (!/^[0-9]{3}$/.test(pin)) return showErr('Enter the 3-digit Table PIN from your table stand.');
   if (pin !== customerTable.pin) return showErr('Wrong PIN. Ask your waiter for the correct 3-digit PIN for ' + customerTable.name + '.');
-  pinUnlocked = true; // the table session is now unlocked: service buttons appear
+  pinUnlocked = true; // correct PIN entered: the table session is unlocked
+  /* Duplicate check: one name + one mobile = one active order. A Paid
+     order does not block; an empty phone cannot be checked. */
+  const dup = findOpenDuplicateOrder(name, phone);
+  if (dup) {
+    cart = {};
+    showTrackingFor(dup, 'This name and mobile already have an open order — showing your existing order ' + dup.number + ' (' + dup.status + ').');
+    renderCustomer();
+    return;
+  }
   const items = Object.entries(cart).map(([id, qty]) => {
     const m = itemById(id);
     return { id, name: m.name, price: m.price, qty };
@@ -1431,14 +1732,7 @@ function placeOrder() {
   save();
   persistOrderInsert(order);
   cart = {};
-  lastOrderNumber = order.number;
-  $('#confirm-order-no').textContent = order.number;
-  $('#confirm-table').textContent = customerTable.name;
-  $('#confirm-summary').textContent = items.map(i => i.name + ' ×' + i.qty).join(', ') + ' — Total ' + fmt(orderItemsTotal(order));
-  const cs = $('#confirm-service');
-  if (cs) { cs.innerHTML = serviceButtonsHtml(); wireServiceButtons(cs); }
-  showCustPage('confirm');
-  renderConfirmChat();
+  showTrackingFor(order);
   renderCustomer();
 }
 

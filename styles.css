@@ -18,8 +18,8 @@ h1{font-size:22px;margin:0}
 h2{font-size:18px;margin:22px 0 12px;letter-spacing:-.01em}
 h3{font-size:15px;margin:0 0 10px}
 button{font:inherit;cursor:pointer}
-input,select{font:inherit;padding:9px 10px;border:1px solid var(--line);border-radius:8px;width:100%;background:#fff}
-input:focus,select:focus{outline:2px solid var(--orange);outline-offset:0;border-color:var(--orange)}
+input,select,textarea{font:inherit;padding:9px 10px;border:1px solid var(--line);border-radius:8px;width:100%;background:#fff}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--orange);outline-offset:0;border-color:var(--orange)}
 a{color:var(--orange)}
 .muted{color:var(--muted);font-size:13px}
 code{background:#f1f1f1;padding:1px 5px;border-radius:4px;font-size:13px}
@@ -303,8 +303,8 @@ code{background:#f1f1f1;padding:1px 5px;border-radius:4px;font-size:13px}
    the file, so these win). QR images keep a WHITE background on purpose —
    scanners need the contrast. */
 a{color:#fb923c}
-input,select{background:#0f172a;color:var(--ink);border-color:var(--line)}
-input::placeholder{color:#7d8aa3}
+input,select,textarea{background:#0f172a;color:var(--ink);border-color:var(--line)}
+input::placeholder,textarea::placeholder{color:#7d8aa3}
 .btn{background:#1a2438;color:var(--ink);border-color:var(--line)}
 .btn:hover{background:#22304a}
 .btn-primary{background:var(--orange);border-color:var(--orange);color:#fff}
@@ -356,6 +356,25 @@ code{background:#1e293b;color:#e2e8f0}
 @keyframes feedFlash{0%{background:rgba(234,88,12,.28)}100%{background:#131c2e}}
 .live-dot.live-off{background:#64748b}
 
+/* ---------- live order tracking (customer) ---------- */
+#cust-track-banner{margin-bottom:12px}
+.track-btn{font-size:15px;padding:12px 14px}
+.tracking{display:flex;flex-direction:column;gap:0;margin:16px 0 6px;text-align:left}
+.track-step{display:flex;align-items:flex-start;gap:12px;padding:10px 2px;position:relative}
+.track-step:not(:last-child)::before{content:"";position:absolute;left:15px;top:38px;bottom:-4px;width:2px;background:var(--line)}
+.track-step.done:not(:last-child)::before{background:var(--green)}
+.track-dot{flex:0 0 auto;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;border:2px solid var(--line);background:#1a2438;color:var(--muted)}
+.track-step.done .track-dot{background:#16a34a;border-color:#16a34a;color:#fff}
+.track-step.current .track-dot{background:var(--orange);border-color:var(--orange);color:#fff;box-shadow:0 0 0 4px var(--orange-soft);animation:pulse 2s infinite}
+.track-body{display:flex;flex-direction:column;gap:1px;min-width:0}
+.track-label{font-weight:700;font-size:15px}
+.track-step.upcoming .track-label{color:var(--muted);font-weight:600}
+.track-time{font-size:13px;color:var(--muted)}
+.track-step.current .track-time{color:#fb923c}
+.track-now{margin-left:auto;flex:0 0 auto;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#fb923c;background:var(--orange-soft);border-radius:999px;padding:3px 9px}
+.tracking-cancelled{background:rgba(239,68,68,.12);border:1px solid #7f1d1d;color:#fca5a5;border-radius:10px;padding:12px 14px;font-weight:600;margin:14px 0 6px;text-align:left}
+.dup-note{background:rgba(245,158,11,.13);border:1px solid #92400e;color:#fcd34d;border-radius:10px;padding:12px 14px;font-weight:600;margin:14px 0 6px;text-align:left}
+
 /* ---------- in-app chat (owner ↔ customer) ---------- */
 .chat-thread{margin-top:10px;border-top:1px solid var(--line);padding-top:10px}
 .chat-list{display:flex;flex-direction:column;gap:8px;max-height:260px;overflow-y:auto;padding:4px 2px;margin-bottom:10px}
@@ -368,3 +387,22 @@ code{background:#1e293b;color:#e2e8f0}
 .msg-badge{background:var(--orange);color:#fff;border-radius:999px;font-size:11px;font-weight:700;padding:1px 7px;margin-left:6px;vertical-align:middle}
 .chat-empty{color:var(--muted);font-size:13px}
 .chat-box{margin-top:14px;text-align:left}
+
+/* ---------- customer reviews ---------- */
+.review-box{margin-top:14px;text-align:left}
+.review-box h3{margin-bottom:4px}
+.star-row{display:flex;gap:6px;justify-content:center;margin:12px 0 4px}
+.star-btn{background:none;border:none;font-size:38px;line-height:1;color:#475569;padding:2px 4px;cursor:pointer}
+.star-btn.on{color:#fbbf24}
+.star-btn:hover{transform:scale(1.12)}
+.stars{font-size:18px;letter-spacing:2px;white-space:nowrap}
+.stars .star{color:#475569}
+.stars .star.on{color:#fbbf24}
+.review-label{font-size:13px;font-weight:600;color:#cbd5e1;display:flex;flex-direction:column;gap:5px;margin:10px 0}
+.review-box textarea{resize:vertical;min-height:64px}
+.review-error{background:rgba(239,68,68,.12);border:1px solid #7f1d1d;color:#fca5a5;border-radius:8px;padding:8px 12px;font-size:14px;margin:8px 0}
+.review-thanks{text-align:center}
+.review-thanks-tick{width:56px;height:56px;border-radius:50%;background:var(--green-soft);color:var(--green);font-size:30px;line-height:56px;margin:0 auto 10px}
+.review-stars-big{font-size:26px;margin:8px 0}
+.review-their-comment{font-style:italic;color:var(--ink)}
+.review-card .review-comment{font-size:15px;margin:10px 0 4px}
