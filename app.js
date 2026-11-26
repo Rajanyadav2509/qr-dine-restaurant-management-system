@@ -1,30 +1,40 @@
-/* QR Dine — restaurant QR ordering. Vanilla JS. Data in localStorage (key qrdine-v1).
-   Live across tabs via the window 'storage' event. UPI payments go to the restaurant's real UPI ID. */
+/* QR Dine — restaurant QR ordering. Vanilla JS. Shared database: Supabase
+   project "qr-dine-db" (Realtime). Data lives in Supabase; localStorage
+   (key qrdine-v1) is only an offline cache/fallback. UPI payments go to the
+   restaurant's real UPI ID. Owner dashboard is behind a Supabase Auth login;
+   the customer menu never asks for a login. */
 'use strict';
+
+/* ---------------- Supabase config ----------------
+   The anon key below is a client-side (publishable) key: it is safe to embed
+   in this static site. Data is protected by Row Level Security (see
+   supabase-schema.sql). NEVER put the service_role (secret) key here. */
+const SUPABASE_URL = 'https://qpybzvfycamzosidytjj.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFweWJ6dmZ5Y2Ftem9zaWR5dGpqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTU3MDY2NTcsImV4cCI6MjExMTI4MjY1N30.1vyFLzF5ctFKt0sQpW-X0Ch57jvdCuTM0nOFPBsXPb4';
 
 const LS_KEY = 'qrdine-v1';
 const RESTAURANT_UPI = 'yaduvanshirajan228@axl';
 const OLD_DEMO_UPI = 'qrdine@okaxis';
 
-/* ---------------- seed data ---------------- */
+/* ---------------- seed data (offline cache + reset) ---------------- */
 function seedState() {
   const menu = [
-    { id: 'm1', name: 'Roti', price: 15, veg: true, category: 'Tandoor Se', special: false },
-    { id: 'm2', name: 'Butter Roti', price: 20, veg: true, category: 'Tandoor Se', special: false },
-    { id: 'm3', name: 'Plain Naan', price: 25, veg: true, category: 'Tandoor Se', special: false },
-    { id: 'm4', name: 'Butter Naan', price: 35, veg: true, category: 'Tandoor Se', special: false },
-    { id: 'm5', name: 'Garlic Naan', price: 40, veg: true, category: 'Tandoor Se', special: false },
-    { id: 'm6', name: 'Tandoori Roti', price: 18, veg: true, category: 'Tandoor Se', special: false },
-    { id: 'm7', name: 'Missi Roti', price: 30, veg: true, category: 'Tandoor Se', special: false },
-    { id: 'm8', name: 'Tandoori Chicken (Half)', price: 260, veg: false, category: 'Tandoor Se', special: false },
-    { id: 'm9', name: 'Crispy Baby Corn Chilli', price: 180, veg: true, category: 'Chinese Special', special: true },
-    { id: 'm10', name: 'Crispy Chilli Mushroom', price: 200, veg: true, category: 'Chinese Special', special: false },
-    { id: 'm11', name: 'Veg Hakka Noodles', price: 160, veg: true, category: 'Chinese Special', special: false },
-    { id: 'm12', name: 'Chilli Paneer', price: 190, veg: true, category: 'Chinese Special', special: false },
-    { id: 'm13', name: 'Veg Fried Rice', price: 150, veg: true, category: 'Chinese Special', special: false },
-    { id: 'm14', name: 'Schezwan Noodles', price: 170, veg: true, category: 'Chinese Special', special: false },
-    { id: 'm15', name: 'Chicken Manchurian', price: 220, veg: false, category: 'Chinese Special', special: false },
-    { id: 'm16', name: 'Chilli Chicken', price: 240, veg: false, category: 'Chinese Special', special: false },
+    { id: 'm1', name: 'Roti', price: 15, veg: true, category: 'Tandoor Se', special: false, available: true },
+    { id: 'm2', name: 'Butter Roti', price: 20, veg: true, category: 'Tandoor Se', special: false, available: true },
+    { id: 'm3', name: 'Plain Naan', price: 25, veg: true, category: 'Tandoor Se', special: false, available: true },
+    { id: 'm4', name: 'Butter Naan', price: 35, veg: true, category: 'Tandoor Se', special: false, available: true },
+    { id: 'm5', name: 'Garlic Naan', price: 40, veg: true, category: 'Tandoor Se', special: false, available: true },
+    { id: 'm6', name: 'Tandoori Roti', price: 18, veg: true, category: 'Tandoor Se', special: false, available: true },
+    { id: 'm7', name: 'Missi Roti', price: 30, veg: true, category: 'Tandoor Se', special: false, available: true },
+    { id: 'm8', name: 'Tandoori Chicken (Half)', price: 260, veg: false, category: 'Tandoor Se', special: false, available: true },
+    { id: 'm9', name: 'Crispy Baby Corn Chilli', price: 180, veg: true, category: 'Chinese Special', special: true, available: true },
+    { id: 'm10', name: 'Crispy Chilli Mushroom', price: 200, veg: true, category: 'Chinese Special', special: false, available: true },
+    { id: 'm11', name: 'Veg Hakka Noodles', price: 160, veg: true, category: 'Chinese Special', special: false, available: true },
+    { id: 'm12', name: 'Chilli Paneer', price: 190, veg: true, category: 'Chinese Special', special: false, available: true },
+    { id: 'm13', name: 'Veg Fried Rice', price: 150, veg: true, category: 'Chinese Special', special: false, available: true },
+    { id: 'm14', name: 'Schezwan Noodles', price: 170, veg: true, category: 'Chinese Special', special: false, available: true },
+    { id: 'm15', name: 'Chicken Manchurian', price: 220, veg: false, category: 'Chinese Special', special: false, available: true },
+    { id: 'm16', name: 'Chilli Chicken', price: 240, veg: false, category: 'Chinese Special', special: false, available: true },
   ];
   const tables = [];
   for (let i = 1; i <= 10; i++) {
@@ -33,26 +43,30 @@ function seedState() {
   tables.push({ id: 't11', name: 'Lounge Room', pin: '950', type: 'room', status: 'Available' });
   return {
     v: 1,
-    settings: { name: 'Hotel Annapurna', address: 'Market, Royal Garden Park, Bokaro', upiId: RESTAURANT_UPI, currency: '₹' },
+    settings: { name: 'Bhukhad Bachelors', address: 'Market, Royal Garden Park, Bokaro', upiId: RESTAURANT_UPI, currency: '₹' },
     menu, tables,
     orders: [],
     nextOrderNo: 1001,
   };
 }
 
-function loadState() {
+/* ---------------- local cache (offline fallback only) ---------------- */
+function loadLocal() {
   try {
     const raw = localStorage.getItem(LS_KEY);
     if (!raw) { const s = seedState(); localStorage.setItem(LS_KEY, JSON.stringify(s)); return s; }
     const s = JSON.parse(raw);
     if (!s || s.v !== 1 || !Array.isArray(s.menu) || !Array.isArray(s.tables)) return seedState();
     if (s.settings && s.settings.upiId === OLD_DEMO_UPI) { s.settings.upiId = RESTAURANT_UPI; try { localStorage.setItem(LS_KEY, JSON.stringify(s)); } catch (e) {} }
+    s.menu.forEach(m => { if (m.available === undefined) m.available = true; });
     return s;
   } catch (e) { return seedState(); }
 }
+function saveLocal() { try { localStorage.setItem(LS_KEY, JSON.stringify(state)); } catch (e) {} }
 
-let state = loadState();
-function save() { localStorage.setItem(LS_KEY, JSON.stringify(state)); }
+let state = loadLocal();
+/* save() keeps the offline cache fresh; Supabase writes happen via persist*(). */
+function save() { saveLocal(); }
 
 /* ---------------- helpers ---------------- */
 const $ = (s, r) => (r || document).querySelector(s);
@@ -62,13 +76,21 @@ const fmt = (n) => state.settings.currency + Number(n || 0).toLocaleString('en-I
 const tableById = (id) => state.tables.find(t => t.id === id);
 const itemById = (id) => state.menu.find(m => m.id === id);
 const uid = (p) => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+function newUuid() {
+  if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
 const isToday = (iso) => new Date(iso).toDateString() === new Date().toDateString();
 const orderItemsTotal = (o) => o.items.reduce((s, it) => s + it.price * it.qty, 0);
 const openOrdersFor = (tableId) => state.orders.filter(o => o.tableId === tableId && o.status !== 'Paid' && o.status !== 'Cancelled');
 const tableHasNew = (tableId) => state.orders.some(o => o.tableId === tableId && o.status === 'New');
 function refreshTableStatus(tableId) {
   const t = tableById(tableId); if (!t) return;
-  t.status = openOrdersFor(tableId).length ? 'Occupied' : 'Available';
+  const next = openOrdersFor(tableId).length ? 'Occupied' : 'Available';
+  if (t.status !== next) { t.status = next; persistTable(t); }
 }
 function categories() {
   const cats = [];
@@ -83,8 +105,16 @@ function menuUrlFor(tableId) {
   const n = tableId.replace(/^t/, '');
   return location.origin + location.pathname + '?table=' + n;
 }
+function deriveNextOrderNo() {
+  let max = 1000;
+  state.orders.forEach(o => {
+    const m = /ORD-(\d+)/.exec(o.number || '');
+    if (m) max = Math.max(max, parseInt(m[1], 10));
+  });
+  state.nextOrderNo = max + 1;
+}
 
-/* QR rendering (qrcodejs from CDN, with a text fallback if offline) */
+/* QR rendering (qrcodejs vendored — works offline; text fallback if it fails) */
 function renderQR(el, text, size) {
   el.innerHTML = '';
   if (window.QRCode) {
@@ -93,6 +123,222 @@ function renderQR(el, text, size) {
   }
   el.innerHTML = '<div class="qr-fallback">QR code could not be drawn (QR library offline).<br>Open this link instead:<br>' + esc(text) + '</div>';
   return false;
+}
+
+/* ---------------- row <-> local mapping (snake_case DB, camelCase app) ---------------- */
+function rowToOrder(r) {
+  return {
+    id: r.id, number: r.number, tableId: r.table_id,
+    items: Array.isArray(r.items) ? r.items : [],
+    customerName: r.customer_name || '', phone: r.phone || '', instructions: r.notes || '',
+    status: r.status, createdAt: r.created_at,
+    paymentMode: r.payment_mode || undefined,
+    finalTotal: r.final_total != null ? Number(r.final_total) : undefined,
+    settledAt: r.settled_at || undefined,
+  };
+}
+function orderToRow(o) {
+  const total = orderItemsTotal(o);
+  return {
+    id: o.id, number: o.number, table_id: o.tableId,
+    customer_name: o.customerName, phone: o.phone || null, notes: o.instructions || null,
+    status: o.status, items: o.items,
+    payment_mode: o.paymentMode || null,
+    subtotal: total, discount: 0, extra: 0, grand: total,
+    final_total: o.finalTotal != null ? o.finalTotal : null,
+    created_at: o.createdAt, settled_at: o.settledAt || null,
+  };
+}
+function rowToMenu(r) {
+  return { id: r.id, name: r.name, price: Number(r.price), veg: !!r.veg, category: r.category, special: !!r.special, available: r.available !== false };
+}
+function menuToRow(m) {
+  return { id: m.id, name: m.name, price: m.price, veg: !!m.veg, category: m.category, special: !!m.special, available: m.available !== false };
+}
+function rowToTable(r) {
+  return { id: r.id, name: r.name, pin: r.pin, type: r.type, status: r.status };
+}
+function tableToRow(t) {
+  return { id: t.id, name: t.name, pin: t.pin, type: t.type, status: t.status };
+}
+function rowToSettings(r) {
+  return { name: r.restaurant_name, address: r.address || '', upiId: r.upi_id, currency: r.currency || '₹' };
+}
+function settingsToRow() {
+  return { id: 1, restaurant_name: state.settings.name, address: state.settings.address, upi_id: state.settings.upiId, currency: state.settings.currency };
+}
+
+/* ---------------- Supabase data layer ---------------- */
+let sb = null;          // Supabase client (null when offline)
+let online = false;     // true once the shared database answered
+let liveSubscribed = false;
+let ownerSession = null;
+let offlineDemo = false; // owner chose "Continue in offline demo"
+
+function withTimeout(promise, ms) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), ms)),
+  ]);
+}
+
+async function initSupabase() {
+  if (!window.supabase || !window.supabase.createClient) {
+    console.warn('QR Dine: Supabase JS library did not load — offline demo mode.');
+    return false;
+  }
+  try {
+    sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: { persistSession: true, autoRefreshToken: true },
+    });
+    // Lightweight probe: if the tables do not exist yet this throws and we
+    // fall back to offline demo mode (the parent runs the schema next).
+    const { error } = await withTimeout(
+      sb.from('qrdine_settings').select('id').limit(1), 8000);
+    if (error) throw error;
+    online = true;
+    return true;
+  } catch (e) {
+    console.warn('QR Dine: shared database unreachable — offline demo mode.', e && e.message ? e.message : e);
+    sb = null;
+    online = false;
+    return false;
+  }
+}
+
+async function loadFromSupabase() {
+  const [sRes, mRes, tRes, oRes] = await Promise.all([
+    sb.from('qrdine_settings').select('*').eq('id', 1).maybeSingle(),
+    sb.from('qrdine_menu').select('*').order('id'),
+    sb.from('qrdine_tables').select('*').order('id'),
+    sb.from('qrdine_orders').select('*').order('created_at', { ascending: false }).limit(500),
+  ]);
+  if (sRes.error) throw sRes.error;
+  if (mRes.error) throw mRes.error;
+  if (tRes.error) throw tRes.error;
+  if (oRes.error) throw oRes.error;
+  if (sRes.data) state.settings = rowToSettings(sRes.data);
+  if (Array.isArray(mRes.data) && mRes.data.length) state.menu = mRes.data.map(rowToMenu);
+  if (Array.isArray(tRes.data) && tRes.data.length) state.tables = tRes.data.map(rowToTable);
+  state.orders = (oRes.data || []).map(rowToOrder);
+  deriveNextOrderNo();
+  saveLocal();
+}
+
+/* Realtime: every device re-renders live, no refresh. Handlers merge by id,
+   so our own writes echoing back never duplicate rows. */
+function applyOrderRow(r) {
+  const o = rowToOrder(r);
+  const i = state.orders.findIndex(x => x.id === o.id);
+  if (i >= 0) state.orders[i] = o; else state.orders.push(o);
+  deriveNextOrderNo();
+  refreshTableStatus(o.tableId);
+}
+function applyTableRow(r) {
+  const t = rowToTable(r);
+  const i = state.tables.findIndex(x => x.id === t.id);
+  if (i >= 0) state.tables[i] = t; else state.tables.push(t);
+}
+function applyMenuRow(r) {
+  const m = rowToMenu(r);
+  const i = state.menu.findIndex(x => x.id === m.id);
+  if (i >= 0) state.menu[i] = m; else state.menu.push(m);
+}
+function subscribeRealtime() {
+  if (!sb || liveSubscribed) return;
+  liveSubscribed = true;
+  sb.channel('qrdine-live')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'qrdine_orders' }, (payload) => {
+      if (payload.eventType === 'DELETE') {
+        state.orders = state.orders.filter(x => x.id !== payload.old.id);
+        renderAll();
+      } else if (payload.new) { applyOrderRow(payload.new); saveLocal(); renderAll(); }
+    })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'qrdine_tables' }, (payload) => {
+      if (payload.eventType === 'DELETE') {
+        state.tables = state.tables.filter(x => x.id !== payload.old.id);
+        renderAll();
+      } else if (payload.new) { applyTableRow(payload.new); saveLocal(); renderAll(); }
+    })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'qrdine_menu' }, (payload) => {
+      if (payload.eventType === 'DELETE') {
+        state.menu = state.menu.filter(x => x.id !== payload.old.id);
+        renderAll();
+      } else if (payload.new) { applyMenuRow(payload.new); saveLocal(); renderAll(); }
+    })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'qrdine_settings' }, (payload) => {
+      if (payload.new) { state.settings = rowToSettings(payload.new); saveLocal(); renderAll(); }
+    })
+    .subscribe((status) => { updateSyncBadge(status === 'SUBSCRIBED'); });
+}
+
+/* ---------------- persist helpers (no-ops when offline) ---------------- */
+/* NOTE: persist helpers take a thunk — the Supabase query must only be built
+   when online; evaluating sb.from(...) while sb is null would throw. */
+function sbSafe(fn) {
+  if (!online || !sb) return Promise.resolve(null);
+  let p;
+  try { p = fn(); } catch (e) { console.warn('QR Dine: Supabase write failed', e && e.message ? e.message : e); return Promise.resolve(null); }
+  return Promise.resolve(p).catch(e => { console.warn('QR Dine: Supabase write failed', e && e.message ? e.message : e); return null; });
+}
+function persistOrderInsert(o) { return sbSafe(() => sb.from('qrdine_orders').insert(orderToRow(o))); }
+function persistOrderUpdate(o) {
+  return sbSafe(() => sb.from('qrdine_orders').update(orderToRow(o)).eq('id', o.id));
+}
+function persistTable(t) { return sbSafe(() => sb.from('qrdine_tables').upsert(tableToRow(t))); }
+function persistTableDelete(id) { return sbSafe(() => sb.from('qrdine_tables').delete().eq('id', id)); }
+function persistMenu(m) { return sbSafe(() => sb.from('qrdine_menu').upsert(menuToRow(m))); }
+function persistMenuDelete(id) { return sbSafe(() => sb.from('qrdine_menu').delete().eq('id', id)); }
+function persistSettings() { return sbSafe(() => sb.from('qrdine_settings').upsert(settingsToRow())); }
+async function persistResetDemo() {
+  if (!online || !sb) return;
+  const seed = seedState();
+  await sbSafe(() => sb.from('qrdine_orders').delete().neq('id', '00000000-0000-0000-0000-000000000000'));
+  await sbSafe(() => sb.from('qrdine_menu').delete().neq('id', ''));
+  await sbSafe(() => sb.from('qrdine_tables').delete().neq('id', ''));
+  await sbSafe(() => sb.from('qrdine_menu').insert(seed.menu.map(menuToRow)));
+  await sbSafe(() => sb.from('qrdine_tables').insert(seed.tables.map(tableToRow)));
+  await sbSafe(() => sb.from('qrdine_settings').upsert({ id: 1, restaurant_name: seed.settings.name, address: seed.settings.address, upi_id: seed.settings.upiId, currency: seed.settings.currency }));
+}
+
+/* ---------------- owner auth (Supabase Auth; customer view never logs in) ---------------- */
+async function checkAuth() {
+  if (!online || !sb) return null;
+  try {
+    const { data } = await sb.auth.getSession();
+    ownerSession = data && data.session ? data.session : null;
+  } catch (e) { ownerSession = null; }
+  return ownerSession;
+}
+function showLoginScreen() {
+  $('#login-shell').hidden = false;
+  $('#admin-shell').hidden = true;
+  $('#offline-banner').hidden = !(!online);
+  $('#login-offline-note').hidden = online;
+  $('#btn-offline-demo').hidden = online;
+  $('#login-error').hidden = true;
+  updateSyncBadge(false);
+}
+function showAdminShell() {
+  $('#login-shell').hidden = true;
+  $('#admin-shell').hidden = false;
+  $('#offline-banner').hidden = online;
+  updateSyncBadge(online && liveSubscribed);
+}
+function updateSyncBadge(live) {
+  const dot = $('.live-dot');
+  const label = $('#sync-label');
+  if (!dot || !label) return;
+  if (online && live) {
+    dot.style.background = 'var(--green)';
+    label.textContent = 'Live · Shared DB';
+  } else if (online) {
+    dot.style.background = 'var(--amber)';
+    label.textContent = 'Shared DB · connecting…';
+  } else {
+    dot.style.background = 'var(--amber)';
+    label.textContent = 'Offline demo';
+  }
 }
 
 /* ---------------- navigation ---------------- */
@@ -120,7 +366,8 @@ function renderAll() {
   if (customerMode) renderCustomer();
 }
 window.addEventListener('storage', (e) => {
-  if (e.key === LS_KEY) { state = loadState(); renderAll(); }
+  // Same-browser tabs only matter in offline mode; online mode uses Realtime.
+  if (!online && e.key === LS_KEY) { state = loadLocal(); renderAll(); }
 });
 
 /* ---------------- dashboard ---------------- */
@@ -187,7 +434,7 @@ function renderMenuAdmin() {
   $$('#menu-list [data-del]').forEach(b => b.addEventListener('click', () => {
     const m = itemById(b.dataset.del);
     if (m && confirm('Delete "' + m.name + '" from the menu?')) {
-      state.menu = state.menu.filter(x => x.id !== m.id); save(); renderMenuAdmin();
+      state.menu = state.menu.filter(x => x.id !== m.id); save(); persistMenuDelete(m.id); renderMenuAdmin();
     }
   }));
 }
@@ -226,12 +473,12 @@ function renderTablesAdmin() {
     if (!/^[0-9]{3}$/.test(pin)) { alert('PIN must be exactly 3 digits.'); return; }
     t.pin = pin;
     t.status = $('[data-tstatus="' + t.id + '"]').value;
-    save(); renderTablesAdmin(); renderDashboard();
+    save(); persistTable(t); renderTablesAdmin(); renderDashboard();
   }));
   $$('#tables-list [data-tdel]').forEach(b => b.addEventListener('click', () => {
     const t = tableById(b.dataset.tdel); if (!t) return;
     if (openOrdersFor(t.id).length) { alert('This table has open orders. Settle them first.'); return; }
-    if (confirm('Delete ' + t.name + '?')) { state.tables = state.tables.filter(x => x.id !== t.id); save(); renderTablesAdmin(); }
+    if (confirm('Delete ' + t.name + '?')) { state.tables = state.tables.filter(x => x.id !== t.id); save(); persistTableDelete(t.id); renderTablesAdmin(); }
   }));
 }
 
@@ -257,11 +504,11 @@ function renderOrders() {
     const o = state.orders.find(x => x.id === b.dataset.advance); if (!o) return;
     o.status = { 'New': 'Preparing', 'Preparing': 'Served', 'Served': 'Paid' }[o.status];
     if (o.status === 'Paid') { o.finalTotal = orderItemsTotal(o); o.settledAt = new Date().toISOString(); o.paymentMode = o.paymentMode || 'Cash'; }
-    refreshTableStatus(o.tableId); save(); renderAll();
+    refreshTableStatus(o.tableId); save(); persistOrderUpdate(o); renderAll();
   }));
   $$('#orders-list [data-cancel]').forEach(b => b.addEventListener('click', () => {
     const o = state.orders.find(x => x.id === b.dataset.cancel); if (!o) return;
-    if (confirm('Cancel order ' + o.number + '?')) { o.status = 'Cancelled'; refreshTableStatus(o.tableId); save(); renderAll(); }
+    if (confirm('Cancel order ' + o.number + '?')) { o.status = 'Cancelled'; refreshTableStatus(o.tableId); save(); persistOrderUpdate(o); renderAll(); }
   }));
 }
 
@@ -388,6 +635,7 @@ function settleBill(tableId, tot) {
   orders.forEach(o => { o.finalTotal = Math.round(orderItemsTotal(o) / sub * tot.grand); });
   refreshTableStatus(tableId);
   save();
+  orders.forEach(o => persistOrderUpdate(o));
   billTableId = ''; billDiscount = { mode: 'percent', value: 0 }; billExtra = 0;
   renderAll();
   alert('Bill settled. ' + (tableById(tableId) ? tableById(tableId).name : 'Table') + ' is now Available.');
@@ -469,7 +717,7 @@ function renderSettings() {
   $('#sf-currency').value = state.settings.currency;
 }
 
-/* ---------------- customer view ---------------- */
+/* ---------------- customer view (never asks for login) ---------------- */
 let customerMode = false;
 let customerTable = null;
 let cart = {};
@@ -498,7 +746,7 @@ function renderCustomer() {
     cats.map(c => '<button class="chip' + (custCat === c ? ' active' : '') + '" data-cat="' + esc(c) + '">' + esc(c) + '</button>').join('');
   $$('#cust-tabs .chip').forEach(b => b.addEventListener('click', () => { custCat = b.dataset.cat; renderCustomer(); }));
   const q = custSearch.trim().toLowerCase();
-  const items = state.menu.filter(m => (!custCat || m.category === custCat) && (!q || m.name.toLowerCase().includes(q)));
+  const items = state.menu.filter(m => m.available !== false && (!custCat || m.category === custCat) && (!q || m.name.toLowerCase().includes(q)));
   $('#cust-items').innerHTML = items.length ? items.map(m => {
     const qty = cart[m.id] || 0;
     return '<div class="cust-item"><div><span class="veg-mark' + (m.veg ? '' : ' nonveg') + '"></span>' +
@@ -561,13 +809,14 @@ function placeOrder() {
     return { id, name: m.name, price: m.price, qty };
   });
   const order = {
-    id: uid('o'), number: 'ORD-' + (state.nextOrderNo++), tableId: customerTable.id,
+    id: online ? newUuid() : uid('o'), number: 'ORD-' + (state.nextOrderNo++), tableId: customerTable.id,
     items, customerName: name, phone, instructions: notes,
     status: 'New', createdAt: new Date().toISOString(),
   };
   state.orders.push(order);
   refreshTableStatus(customerTable.id);
   save();
+  persistOrderInsert(order);
   cart = {};
   $('#confirm-order-no').textContent = order.number;
   $('#confirm-table').textContent = customerTable.name;
@@ -593,73 +842,155 @@ function tickClock() {
   const el = $('#clock');
   if (el) el.textContent = new Date().toLocaleString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 }
-function init() {
-  customerTable = customerTableFromUrl();
-  customerMode = !!customerTable;
-  $('#admin-shell').hidden = customerMode;
-  $('#customer-shell').hidden = !customerMode;
-
-  if (customerMode) {
-    renderCustomer();
-    showCustPage('menu');
-  } else {
-    $$('#main-nav button').forEach(b => b.addEventListener('click', () => showView(b.dataset.view)));
-    $('#btn-customer-view').addEventListener('click', () => openTablePickerFor());
-    $('#picker-close').addEventListener('click', () => { $('#table-picker').hidden = true; });
-    $('#table-picker').addEventListener('click', (e) => { if (e.target.id === 'table-picker') $('#table-picker').hidden = true; });
-    $('#menu-form').addEventListener('submit', (e) => {
-      e.preventDefault();
-      const name = $('#mf-name').value.trim();
-      const price = Math.max(1, Math.round(Number($('#mf-price').value) || 0));
-      const category = $('#mf-category').value || categories()[0] || 'Tandoor Se';
-      const veg = $('#mf-veg').checked, special = $('#mf-special').checked;
-      if (!name || !price) return;
-      if (editingMenuId) {
-        const m = itemById(editingMenuId);
-        Object.assign(m, { name, price, category, veg, special });
-      } else {
-        state.menu.push({ id: uid('m'), name, price, category, veg, special });
-      }
-      save(); resetMenuForm(); renderMenuAdmin();
-    });
-    $('#mf-cancel').addEventListener('click', resetMenuForm);
-    $('#menu-filter').addEventListener('change', renderMenuAdmin);
-    $('#table-form').addEventListener('submit', (e) => {
-      e.preventDefault();
-      const name = $('#tf-name').value.trim();
-      const pin = $('#tf-pin').value.trim();
-      const type = $('#tf-type').value;
-      if (!name || !/^[0-9]{3}$/.test(pin)) { alert('Enter a name and a 3-digit PIN.'); return; }
-      state.tables.push({ id: uid('t'), name, pin, type, status: 'Available' });
-      save(); e.target.reset(); renderTablesAdmin();
-    });
-    $$('[data-ofilter]').forEach(b => b.addEventListener('click', () => { orderFilter = b.dataset.ofilter; renderOrders(); }));
-    $('#bill-table').addEventListener('change', (e) => { billTableId = e.target.value; billDiscount = { mode: 'percent', value: 0 }; billExtra = 0; renderBillArea(); });
-    $('#btn-print-stands').addEventListener('click', printStands);
-    $('#settings-form').addEventListener('submit', (e) => {
-      e.preventDefault();
-      state.settings.name = $('#sf-name').value.trim() || 'Restaurant';
-      state.settings.address = $('#sf-address').value.trim();
-      state.settings.upiId = $('#sf-upi').value.trim() || RESTAURANT_UPI;
-      state.settings.currency = $('#sf-currency').value.trim() || '₹';
-      save(); renderAll(); alert('Settings saved.');
-    });
-    $('#btn-reset-demo').addEventListener('click', () => {
-      if (confirm('Reset all demo data? Orders, menu edits and settings will be restored to the original demo.')) {
-        localStorage.removeItem(LS_KEY);
-        location.reload();
-      }
-    });
-    tickClock(); setInterval(tickClock, 30000);
-    renderAll();
-  }
-
-  // customer events (also wired when admin opens customer view in a new tab — same page load)
+function wireCustomerEvents() {
   $('#cust-search').addEventListener('input', (e) => { custSearch = e.target.value; renderCustomer(); });
   $('#btn-view-cart').addEventListener('click', () => showCustPage('cart'));
   $('#btn-back-menu').addEventListener('click', () => showCustPage('menu'));
   $('#order-form').addEventListener('submit', (e) => { e.preventDefault(); placeOrder(); });
   $('#btn-new-order').addEventListener('click', () => { cart = {}; renderCustomer(); showCustPage('menu'); });
   $('#btn-back-admin').addEventListener('click', () => { location.href = location.pathname; });
+}
+function wireAdminEvents() {
+  $$('#main-nav button').forEach(b => b.addEventListener('click', () => showView(b.dataset.view)));
+  $('#btn-customer-view').addEventListener('click', () => openTablePickerFor());
+  $('#picker-close').addEventListener('click', () => { $('#table-picker').hidden = true; });
+  $('#table-picker').addEventListener('click', (e) => { if (e.target.id === 'table-picker') $('#table-picker').hidden = true; });
+  $('#menu-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const name = $('#mf-name').value.trim();
+    const price = Math.max(1, Math.round(Number($('#mf-price').value) || 0));
+    const category = $('#mf-category').value || categories()[0] || 'Tandoor Se';
+    const veg = $('#mf-veg').checked, special = $('#mf-special').checked;
+    if (!name || !price) return;
+    if (editingMenuId) {
+      const m = itemById(editingMenuId);
+      Object.assign(m, { name, price, category, veg, special });
+      save(); persistMenu(m);
+    } else {
+      const m = { id: uid('m'), name, price, category, veg, special, available: true };
+      state.menu.push(m);
+      save(); persistMenu(m);
+    }
+    resetMenuForm(); renderMenuAdmin();
+  });
+  $('#mf-cancel').addEventListener('click', resetMenuForm);
+  $('#menu-filter').addEventListener('change', renderMenuAdmin);
+  $('#table-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const name = $('#tf-name').value.trim();
+    const pin = $('#tf-pin').value.trim();
+    const type = $('#tf-type').value;
+    if (!name || !/^[0-9]{3}$/.test(pin)) { alert('Enter a name and a 3-digit PIN.'); return; }
+    const t = { id: uid('t'), name, pin, type, status: 'Available' };
+    state.tables.push(t);
+    save(); persistTable(t); e.target.reset(); renderTablesAdmin();
+  });
+  $$('[data-ofilter]').forEach(b => b.addEventListener('click', () => { orderFilter = b.dataset.ofilter; renderOrders(); }));
+  $('#bill-table').addEventListener('change', (e) => { billTableId = e.target.value; billDiscount = { mode: 'percent', value: 0 }; billExtra = 0; renderBillArea(); });
+  $('#btn-print-stands').addEventListener('click', printStands);
+  $('#settings-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    state.settings.name = $('#sf-name').value.trim() || 'Restaurant';
+    state.settings.address = $('#sf-address').value.trim();
+    state.settings.upiId = $('#sf-upi').value.trim() || RESTAURANT_UPI;
+    state.settings.currency = $('#sf-currency').value.trim() || '₹';
+    save(); persistSettings(); renderAll(); alert('Settings saved.');
+  });
+  $('#btn-reset-demo').addEventListener('click', async () => {
+    if (!confirm('Reset all demo data? Orders, menu edits and settings will be restored to the original demo.')) return;
+    if (online) {
+      await persistResetDemo();
+      try { await loadFromSupabase(); } catch (e) { state = seedState(); }
+      saveLocal(); renderAll();
+    } else {
+      localStorage.removeItem(LS_KEY);
+      location.reload();
+    }
+  });
+  $('#btn-sign-out').addEventListener('click', async () => {
+    if (online && sb) { try { await sb.auth.signOut(); } catch (e) {} }
+    ownerSession = null; offlineDemo = false;
+    showLoginScreen();
+  });
+  tickClock(); setInterval(tickClock, 30000);
+}
+function wireLoginEvents() {
+  $('#login-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const errEl = $('#login-error');
+    errEl.hidden = true;
+    const email = $('#login-email').value.trim();
+    const password = $('#login-password').value;
+    const btn = $('#login-form button[type="submit"]');
+    btn.disabled = true;
+    try {
+      const { data, error } = await sb.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      ownerSession = data.session;
+      subscribeRealtime();
+      showAdminShell();
+      renderAll();
+    } catch (err) {
+      errEl.textContent = (err && err.message) ? err.message : 'Sign-in failed. Check your email and password.';
+      errEl.hidden = false;
+    } finally { btn.disabled = false; }
+  });
+  $('#btn-offline-demo').addEventListener('click', () => {
+    offlineDemo = true;
+    showAdminShell();
+    renderAll();
+  });
+}
+async function init() {
+  customerTable = customerTableFromUrl();
+  customerMode = !!customerTable;
+  $('#loading').hidden = false;
+
+  // 1. Load data: shared Supabase first, offline cache as fallback.
+  const reached = await initSupabase();
+  if (reached) {
+    try { await loadFromSupabase(); subscribeRealtime(); }
+    catch (e) {
+      console.warn('QR Dine: shared data load failed — offline demo mode.', e && e.message ? e.message : e);
+      online = false; sb = null;
+      state = loadLocal(); deriveNextOrderNo();
+    }
+  } else {
+    state = loadLocal(); deriveNextOrderNo();
+  }
+  $('#loading').hidden = true;
+
+  // 2. Customer view: no login, ever.
+  if (customerMode) {
+    $('#admin-shell').hidden = true;
+    $('#login-shell').hidden = true;
+    $('#customer-shell').hidden = false;
+    $('#offline-banner').hidden = online;
+    if (!customerTable) {
+      $('#customer-shell').innerHTML = '<div class="cust-body"><div class="card"><h2>Table not found</h2><p class="muted">This QR code does not match a table. Please scan the QR code on your table stand again, or ask your waiter for help.</p></div></div>';
+    } else {
+      renderCustomer();
+      showCustPage('menu');
+    }
+    wireCustomerEvents();
+    return;
+  }
+
+  // 3. Owner dashboard: login gate (Supabase Auth when online).
+  wireLoginEvents();
+  wireAdminEvents();
+  if (online) {
+    await checkAuth();
+    if (sb) {
+      sb.auth.onAuthStateChange((_event, session) => {
+        ownerSession = session || null;
+        if (!session && !offlineDemo && $('#login-shell').hidden) showLoginScreen();
+      });
+    }
+    if (ownerSession) { subscribeRealtime(); showAdminShell(); renderAll(); }
+    else showLoginScreen();
+  } else {
+    showLoginScreen();
+  }
 }
 document.addEventListener('DOMContentLoaded', init);

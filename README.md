@@ -23,7 +23,59 @@ HTML/CSS/JS only. No build step, no framework, no account needed.
 - **Settings** — restaurant name, address, UPI ID, currency. **Reset demo data**
   restores the original demo.
 
-## How to run
+## Shared database (Supabase) — live on all devices
+
+Orders, tables, menu and settings now live in a **Supabase** project
+(`qr-dine-db`, Mumbai region), not in the browser. The owner dashboard
+updates live on every device through Supabase Realtime — no refresh.
+
+- **Customer scans a table QR → orders** → the order is saved in Supabase →
+  the dashboard on any device shows that table **Occupied** instantly.
+- **Owner settles the bill (Print & Settle)** → the order becomes Paid → the
+  table turns **Available** on all devices instantly.
+- **Owner login:** the dashboard is behind a Supabase Auth login (email +
+  password). The customer menu never asks for a login.
+
+### First-time setup (Supabase dashboard)
+
+1. **Create the tables:** Supabase Dashboard → SQL Editor → New query →
+   paste `supabase-schema.sql` and Run. It creates `qrdine_tables`,
+   `qrdine_menu`, `qrdine_orders`, `qrdine_settings`, enables Row Level
+   Security (demo-grade open policies — see the comment at the top of the
+   SQL file), enables Realtime on all four tables, and seeds the 16 menu
+   items, 11 tables with PINs, and the Bhukhad Bachelors settings row.
+2. **Create the owner user:** Authentication → Users → Add user → enter the
+   owner's email and a password. That is the login for the dashboard.
+   (Confirm the user if email confirmation is on.)
+3. **Confirm Realtime:** Database → Replication → check that
+   `qrdine_tables`, `qrdine_orders`, `qrdine_menu` and `qrdine_settings`
+   are listed under the `supabase_realtime` publication.
+4. Deploy the files (same as before — Vercel / Netlify / static host). No
+   build step. The app's Supabase URL and anon key are in `app.js`
+   (`SUPABASE_URL`, `SUPABASE_ANON_KEY`).
+
+### Offline fallback
+
+If the Supabase library or project cannot be reached (no internet, CDN
+blocked), the app still works in **offline demo mode**: it uses the local
+demo data stored in the browser, shows a visible amber banner
+("Offline — demo data, not shared across devices"), and the owner login
+screen offers a "Continue in offline demo" button. Offline orders are
+**not** shared with other devices and are **not** uploaded later — they
+stay in that one browser. Reconnect and reload to use the shared database.
+
+### Security notes
+
+- The key in `app.js` is the **anon (publishable) key** — safe to embed in
+  a static site. Data is protected by Row Level Security. **Never** put the
+  `service_role` (secret) key in the website code.
+- The RLS policies in `supabase-schema.sql` are **demo-grade** (anon can
+  read/write everything, so login-free customer ordering works). Before real
+  production use, tighten them: anon INSERT-only on `qrdine_orders`, SELECT
+  on menu/tables, and authenticated-owner-only UPDATE/DELETE.
+- The database password was set with Supabase's generator at project
+  creation and is not stored anywhere in this repo — reset it in Supabase
+  Dashboard → Project Settings → Database if needed.
 
 **Easiest:** double-click `index.html` — it opens in the browser.
 
@@ -37,15 +89,16 @@ another tab (`http://localhost:8000/?table=1`).
 
 ## Demo data
 
-- Restaurant: **Hotel Annapurna, Bokaro**
+- Restaurant: **Bhukhad Bachelors, Bokaro**
 - Tables 1–10, PINs **936, 937, 938 … 945** (Table 1 = 936, Table 2 = 937, and
   so on). Lounge Room PIN is **950**.
 - Menu: "Tandoor Se" (Roti ₹15, Butter Roti ₹20, naans, Tandoori Chicken) and
   "Chinese Special" (Crispy Baby Corn Chilli ₹180 — Chef's Special, Crispy
   Chilli Mushroom ₹200, noodles, rice, Manchurian).
-- Payment QR uses the clearly-demo UPI ID **`qrdine@okaxis`**. Replace it in
-  Settings with the restaurant's real UPI ID before taking real payments.
-  QR Dine never touches money — the customer's UPI app handles the payment.
+- Payment QR uses the restaurant's real UPI ID **`yaduvanshirajan228@axl`**.
+  The Bill QR encodes the exact bill amount — the customer only confirms the
+  payment in their UPI app. QR Dine never touches money — the customer's
+  UPI app handles the payment.
 
 ## Try the full flow
 
@@ -58,8 +111,11 @@ another tab (`http://localhost:8000/?table=1`).
 4. Enter the correct PIN **936** and Confirm Order. Watch the dashboard in
    the other tab: Table 1 turns Occupied and the order appears — no refresh.
 5. Billing → pick Table 1 → apply a 10% discount (₹415 → ₹373) → scan the
-   Bill QR (it encodes `upi://pay?pa=qrdine@okaxis&...&am=373`) → **Print &
-   Settle**. Table 1 becomes Available again and Analytics shows ₹373 revenue.
+   Bill QR (it encodes `upi://pay?pa=yaduvanshirajan228@axl&...&am=373`) →
+   **Print & Settle**. Table 1 becomes Available again and Analytics shows
+   ₹373 revenue. (On the shared database, the Occupied/Available change
+   appears on every device instantly; in offline demo mode it only shows in
+   that browser.)
 
 ## Deploy free
 
@@ -69,11 +125,8 @@ another tab (`http://localhost:8000/?table=1`).
 
 ## Honest limits
 
-- **Live sync works across tabs of the same browser** (localStorage +
-  `storage` events). It does **not** sync across different devices or
-  phones. For a real restaurant with a phone, a tablet and a laptop, the app
-  needs a small server version (shared database + live updates) — the data
-  model here (tables, menu, orders, statuses) is ready for that step.
+- **Shared sync needs the Supabase tables created** (see above). Until the
+  schema is run, the app runs in offline demo mode (per-browser data only).
 - The QR library (qrcodejs, MIT licence) is vendored as `qrcode.min.js`, so QR
   codes work fully offline. (The cdnjs CDN loads fine from the shell but is
   blocked inside this environment's browser, so the local copy is used.)
