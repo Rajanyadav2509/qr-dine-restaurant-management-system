@@ -265,6 +265,11 @@ code{background:#f1f1f1;padding:1px 5px;border-radius:4px;font-size:13px}
 .spot-dot{width:10px;height:10px;border-radius:50%;background:var(--orange);flex:0 0 auto;animation:pulse 1.6s infinite}
 .spot-close{border:none;background:none;font-size:16px;color:var(--muted);padding:4px 8px}
 .spot-close:hover{color:var(--ink)}
+/* owner notification toast (new customer message / review): same visual
+   language as the spotlight, but it sits above every owner view. */
+.notify-toast{display:flex;align-items:center;flex-wrap:wrap;gap:10px;background:#fff;border:1px solid var(--orange);border-left:4px solid var(--orange);border-radius:var(--radius);padding:12px 16px;margin:14px 0 4px;box-shadow:0 4px 14px rgba(234,88,12,.15);font-size:15px;animation:spotIn .25s ease}
+.notify-toast .grow{flex:1;min-width:200px}
+.notify-toast .notify-action{flex:0 0 auto}
 .highlights{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin:6px 0 4px}
 .highlight{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow);transition:transform .12s ease,box-shadow .12s ease}
 .highlight:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.08)}
@@ -277,6 +282,8 @@ code{background:#f1f1f1;padding:1px 5px;border-radius:4px;font-size:13px}
 .activity-item.act-status .act-dot{background:var(--blue)}
 .activity-item.act-request .act-dot{background:var(--amber)}
 .activity-item.act-bill .act-dot{background:var(--green)}
+.activity-item.act-message .act-dot{background:var(--blue)}
+.activity-item.act-review .act-dot{background:var(--amber)}
 .activity-item .grow{flex:1}
 @keyframes feedFlash{0%{background:#fff3e8}100%{background:#fff}}
 .feed-item.fresh{animation:feedFlash 3s ease-out forwards}
@@ -353,6 +360,7 @@ code{background:#1e293b;color:#e2e8f0}
 .cust-card:hover{box-shadow:0 4px 14px rgba(0,0,0,.45)}
 .feed-item:hover,.order-row:hover,.menu-row:hover,.table-row:hover{border-color:#334155}
 .spotlight{background:#131c2e}
+.notify-toast{background:#131c2e}
 @keyframes feedFlash{0%{background:rgba(234,88,12,.28)}100%{background:#131c2e}}
 .live-dot.live-off{background:#64748b}
 

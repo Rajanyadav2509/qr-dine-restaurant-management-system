@@ -97,9 +97,11 @@ create table if not exists public.qrdine_messages (
   created_at   timestamptz not null default now()
 );
 
-/* Customer reviews — one per order. Shown on the customer's confirmation
-   page only after the bill is settled (order status Paid); listed in the
-   owner's Reviews view. */
+-- Customer star ratings (1–5) left after an order. The app selects,
+-- inserts and subscribes to this table; without it every page load 404s
+-- on qrdine_reviews AND the whole Realtime channel stops delivering
+-- order updates (the server rejects the channel's reviews subscription),
+-- so live tracking never moves.
 create table if not exists public.qrdine_reviews (
   id            uuid primary key default gen_random_uuid(),
   order_number  text not null,
@@ -118,8 +120,8 @@ create index if not exists qrdine_requests_status_idx     on public.qrdine_reque
 create index if not exists qrdine_requests_created_at_idx on public.qrdine_requests (created_at);
 create index if not exists qrdine_messages_order_idx    on public.qrdine_messages (order_number);
 create index if not exists qrdine_messages_created_at_idx on public.qrdine_messages (created_at);
-create index if not exists qrdine_reviews_order_idx     on public.qrdine_reviews (order_number);
-create index if not exists qrdine_reviews_created_at_idx on public.qrdine_reviews (created_at desc);
+create index if not exists qrdine_reviews_order_idx    on public.qrdine_reviews (order_number);
+create index if not exists qrdine_reviews_created_at_idx on public.qrdine_reviews (created_at);
 
 -- ---------------- Row Level Security (demo-grade open policies) ----------------
 

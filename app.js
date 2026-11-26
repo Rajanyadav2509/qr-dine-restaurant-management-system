@@ -199,7 +199,20 @@ function logActivity(kind, key, text) {
   state.activity = state.activity.slice(0, 20);
   lastActivityId = entry.id;
   saveLocal();
-  if (!customerMode) renderAll();
+  if (!customerMode) { renderActivityFeed(); renderAll(); }
+}
+/* The Live Activity feed lives on the Dashboard, but it must update the
+   moment an event lands even when the owner is on another view — so its
+   rendering is a separate function, called from renderDashboard and from
+   logActivity. */
+function renderActivityFeed() {
+  const feedEl = $('#activity-feed');
+  if (!feedEl) return;
+  const items = (state.activity || []).slice(0, 20);
+  feedEl.innerHTML = items.length ? items.map(a => {
+    const fresh = lastActivityId === a.id && (Date.now() - new Date(a.at).getTime() < 6000);
+    return '<div class="feed-item activity-item act-' + esc(a.kind) + (fresh ? ' fresh' : '') + '"><span class="act-dot"></span><div class="grow">' + esc(a.text) + '</div><span class="muted">' + new Date(a.at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) + '</span></div>';
+  }).join('') : '<p class="muted">No activity yet — new orders, status changes and service requests will show up here live.</p>';
 }
 function activityTextOrder(o) {
   const t = tableById(o.tableId);
@@ -234,6 +247,27 @@ function noteRequestRow(r) {
   else if (prev.status !== q.status && q.status === 'Done') logActivity('request', 'req-done:' + q.id, activityTextRequest(q, true));
   return q;
 }
+/* Merge a realtime chat message and tell the owner when it is a NEW
+   customer message. The owner's own messages — and the Realtime echo of a
+   message already in state — never notify. Returns true if the owner was
+   just notified (the caller plays the chime once). */
+function noteMessageRow(r) {
+  const m = rowToMessage(r);
+  const prev = (state.messages || []).find(x => x.id === m.id);
+  applyMessageRow(r);
+  if (!feedReady) return false;
+  if (!prev && m.sender === 'customer') return notifyCustomerMessage(m);
+  return false;
+}
+/* Same for a newly arriving customer review. */
+function noteReviewRow(r) {
+  const v = rowToReview(r);
+  const prev = (state.reviews || []).find(x => x.id === v.id);
+  applyReviewRow(r);
+  if (!feedReady) return false;
+  if (!prev) return notifyCustomerReview(v);
+  return false;
+}
 function showSpotlight(o) {
   if (customerMode) return;
   const el = $('#spotlight'); if (!el) return;
@@ -244,6 +278,77 @@ function showSpotlight(o) {
   if (closeBtn) closeBtn.addEventListener('click', () => { el.hidden = true; });
   if (spotlightTimer) clearTimeout(spotlightTimer);
   spotlightTimer = setTimeout(() => { el.hidden = true; }, 6000);
+}
+/* ---------------- owner notifications: message + review toasts ---------------- */
+/* A customer message or review must reach the owner the moment it happens —
+   a toast at the top of the dashboard (visible on any owner view), the
+   chime, and a Live Activity entry. Owner-sent messages never notify. A
+   message/review arriving twice (Realtime echo + storage event) notifies
+   once: the notified* sets dedupe by id, and the feed dedupes by key. */
+const notifiedMsgIds = new Set();
+const notifiedReviewIds = new Set();
+let notifyTimer = null;
+function showNotifyToast(title, bodyHtml, actionLabel, onAction) {
+  if (customerMode) return;
+  const el = $('#notify-toast'); if (!el) return;
+  el.innerHTML = '<span class="spot-dot"></span><span class="grow"><strong>' + esc(title) + '</strong> — ' + bodyHtml + '</span>' +
+    '<button class="btn btn-sm btn-primary notify-action">' + esc(actionLabel) + '</button>' +
+    '<button class="spot-close" aria-label="Dismiss">✕</button>';
+  el.hidden = false;
+  const actionBtn = $('.notify-action', el);
+  if (actionBtn) actionBtn.addEventListener('click', () => { el.hidden = true; if (onAction) onAction(); });
+  const closeBtn = $('.spot-close', el);
+  if (closeBtn) closeBtn.addEventListener('click', () => { el.hidden = true; });
+  if (notifyTimer) clearTimeout(notifyTimer);
+  notifyTimer = setTimeout(() => { el.hidden = true; }, 8000);
+}
+/* Open an order's owner chat thread (from a toast). Marks the messages read. */
+function openOrderChat(number) {
+  openChatOrder = number;
+  if (!state.msgSeen) state.msgSeen = {};
+  state.msgSeen[number] = new Date().toISOString();
+  saveLocal();
+  showView('orders');
+  renderAll();
+}
+function msgSnippet(text) {
+  const t = (text || '').trim();
+  return t.length > 60 ? t.slice(0, 60) + '…' : t;
+}
+function activityTextMessage(m, o, t) {
+  return 'New message · ' + (t ? t.name : '') + ' · ' + m.orderNumber + ' · ' + (o ? o.customerName : 'Customer') + ' — “' + msgSnippet(m.text) + '”';
+}
+function activityTextReview(r) {
+  const o = state.orders.find(x => x.number === r.orderNumber);
+  const t = o ? tableById(o.tableId) : null;
+  return 'New review ' + r.rating + '★ · ' + (t ? t.name : '') + ' · ' + r.orderNumber + ' · ' + (r.customerName || 'Customer');
+}
+/* Returns true when this was a genuinely new customer event the owner was
+   just told about (toast + feed). The caller plays the chime once. */
+function notifyCustomerMessage(m) {
+  if (customerMode || !feedReady) return false;
+  if (notifiedMsgIds.has(m.id)) return false;
+  notifiedMsgIds.add(m.id);
+  const o = state.orders.find(x => x.number === m.orderNumber);
+  const t = o ? tableById(o.tableId) : null;
+  const name = o ? o.customerName : 'Customer';
+  logActivity('message', 'msg-new:' + m.id, activityTextMessage(m, o, t));
+  showNotifyToast('New message from ' + name,
+    esc(t ? t.name : '') + ' · ' + esc(m.orderNumber) + ': “' + esc(msgSnippet(m.text)) + '”',
+    'Open chat', () => openOrderChat(m.orderNumber));
+  return true;
+}
+function notifyCustomerReview(r) {
+  if (customerMode || !feedReady) return false;
+  if (notifiedReviewIds.has(r.id)) return false;
+  notifiedReviewIds.add(r.id);
+  const o = state.orders.find(x => x.number === r.orderNumber);
+  const t = o ? tableById(o.tableId) : null;
+  logActivity('review', 'review-new:' + r.id, activityTextReview(r));
+  showNotifyToast('New review — ' + r.rating + '★ from ' + (r.customerName || 'Customer'),
+    esc(t ? t.name : '') + ' · ' + esc(r.orderNumber),
+    'View reviews', () => showView('reviews'));
+  return true;
 }
 /* Today's orders, excluding cancelled ones — the shared base for the
    dashboard highlights and the Analytics "today" sections. */
@@ -539,13 +644,13 @@ function subscribeRealtime() {
       if (payload.eventType === 'DELETE') {
         state.messages = state.messages.filter(x => x.id !== payload.old.id);
         renderAll();
-      } else if (payload.new) { applyMessageRow(payload.new); saveLocal(); renderAll(); }
+      } else if (payload.new) { const fresh = noteMessageRow(payload.new); saveLocal(); renderAll(); if (fresh) playChime(); }
     })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'qrdine_reviews' }, (payload) => {
       if (payload.eventType === 'DELETE') {
         state.reviews = state.reviews.filter(x => x.id !== payload.old.id);
         renderAll();
-      } else if (payload.new) { applyReviewRow(payload.new); saveLocal(); renderAll(); }
+      } else if (payload.new) { const fresh = noteReviewRow(payload.new); saveLocal(); renderAll(); if (fresh) playChime(); }
     })
     .subscribe((status) => { updateSyncBadge(status === 'SUBSCRIBED'); });
 }
@@ -720,12 +825,14 @@ window.addEventListener('storage', (e) => {
     const prevReqs = state.requests.slice();
     const prevReqIds = new Set(prevReqs.filter(r => r.status === 'New').map(r => r.id));
     const prevReqStatus = new Map(prevReqs.map(r => [r.id, r.status]));
+    const prevMsgIds = new Set((state.messages || []).map(m => m.id));
+    const prevReviewIds = new Set((state.reviews || []).map(r => r.id));
     state = loadLocal(); renderAll();
     let chimed = false;
     state.orders.forEach(o => {
       if (!prevOrderIds.has(o.id)) {
         if (feedReady) { logActivity('order', 'order-new:' + o.id, activityTextOrder(o)); showSpotlight(o); }
-        playChime(); chimed = true;
+        chimed = true;
       } else if (feedReady && prevStatus.get(o.id) !== o.status) {
         logActivity('status', 'order-status:' + o.id + ':' + o.status, activityTextStatus(o));
       }
@@ -733,11 +840,18 @@ window.addEventListener('storage', (e) => {
     state.requests.forEach(r => {
       if (r.status === 'New' && !prevReqIds.has(r.id)) {
         if (feedReady) logActivity('request', 'req-new:' + r.id, activityTextRequest(r, false));
-        if (!chimed) { playChime(); chimed = true; }
+        chimed = true;
       } else if (feedReady && prevReqStatus.get(r.id) === 'New' && r.status === 'Done') {
         logActivity('request', 'req-done:' + r.id, activityTextRequest(r, true));
       }
     });
+    (state.messages || []).forEach(m => {
+      if (!prevMsgIds.has(m.id) && m.sender === 'customer' && notifyCustomerMessage(m)) chimed = true;
+    });
+    (state.reviews || []).forEach(r => {
+      if (!prevReviewIds.has(r.id) && notifyCustomerReview(r)) chimed = true;
+    });
+    if (chimed) playChime();
   }
 });
 
@@ -799,14 +913,7 @@ function renderDashboard() {
   }).join('') : '<p class="muted">No service requests waiting.</p>';
   $$('#requests-feed [data-req-done]').forEach(b => b.addEventListener('click', () => markRequestDone(b.dataset.reqDone)));
 
-  const feedEl = $('#activity-feed');
-  if (feedEl) {
-    const items = (state.activity || []).slice(0, 20);
-    feedEl.innerHTML = items.length ? items.map(a => {
-      const fresh = lastActivityId === a.id && (Date.now() - new Date(a.at).getTime() < 6000);
-      return '<div class="feed-item activity-item act-' + esc(a.kind) + (fresh ? ' fresh' : '') + '"><span class="act-dot"></span><div class="grow">' + esc(a.text) + '</div><span class="muted">' + new Date(a.at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) + '</span></div>';
-    }).join('') : '<p class="muted">No activity yet — new orders, status changes and service requests will show up here live.</p>';
-  }
+  renderActivityFeed();
 }
 function highlightCard(label, value, sub) {
   return '<div class="highlight"><div class="hl-label">' + esc(label) + '</div><div class="hl-value">' + esc(value) + '</div><div class="hl-sub">' + esc(sub) + '</div></div>';
