@@ -18,9 +18,6 @@ HTML/CSS/JS only. No build step, no framework, no account needed.
 ![Owner login](qr-panel-4-login.png)
 *Owner login — the dashboard is behind a Supabase Auth login. Customers never log in.*
 
-![Owner dashboard](qr-panel-5-dashboard.png)
-*Owner dashboard — tables with PINs and live status; Table 1 Occupied with a new order.*
-
 ## What it does
 
 - **Owner dashboard** — table grid (10 tables + Lounge Room) with live status
