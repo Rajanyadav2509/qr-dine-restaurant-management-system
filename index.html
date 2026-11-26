@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QR Dine — Restaurant QR Ordering</title>
+<link rel="stylesheet" href="styles.css">
+<script src="qrcode.min.js"></script><!-- vendored qrcodejs (MIT) — works offline; CDN version was blocked in this browser -->
+</head>
+<body>
+
+<!-- ================= ADMIN SHELL ================= -->
+<div id="admin-shell">
+  <aside class="sidebar">
+    <div class="brand">
+      <span class="brand-mark">QR</span>
+      <span class="brand-text">QR Dine<small>Restaurant Manager</small></span>
+    </div>
+    <nav id="main-nav">
+      <button data-view="dashboard" class="active">Dashboard</button>
+      <button data-view="menu">Menu Management</button>
+      <button data-view="tables">Tables</button>
+      <button data-view="orders">Orders <span class="badge" id="orders-badge" hidden></span></button>
+      <button data-view="billing">Billing</button>
+      <button data-view="analytics">Analytics</button>
+      <button data-view="qrcodes">QR Codes</button>
+      <button data-view="settings">Settings</button>
+    </nav>
+    <div class="sidebar-foot">
+      <div class="side-rest" id="side-rest-name">Hotel Annapurna</div>
+      <div class="side-rest-sub" id="side-rest-addr">Bokaro</div>
+      <button class="btn btn-outline btn-block" id="btn-customer-view">Open Customer View</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <h1 id="view-title">Dashboard</h1>
+      <div class="topbar-right">
+        <span id="clock"></span>
+        <span class="live-dot" title="Live sync across tabs"></span><span class="live-label">Live</span>
+      </div>
+    </header>
+
+    <!-- DASHBOARD -->
+    <section class="view active" id="view-dashboard">
+      <div class="stat-row" id="dash-stats"></div>
+      <h2>Tables</h2>
+      <div class="table-grid" id="table-grid"></div>
+      <h2>Incoming Orders</h2>
+      <div id="orders-feed" class="feed"></div>
+    </section>
+
+    <!-- MENU MANAGEMENT -->
+    <section class="view" id="view-menu">
+      <h2>Menu Management</h2>
+      <div class="card">
+        <h3 id="menu-form-title">Add Item</h3>
+        <form id="menu-form" class="form-grid">
+          <label>Name <input id="mf-name" required maxlength="60" placeholder="e.g. Butter Naan"></label>
+          <label>Price (₹) <input id="mf-price" type="number" min="1" step="1" required placeholder="40"></label>
+          <label>Category
+            <select id="mf-category"></select>
+          </label>
+          <label class="check">Veg <input type="checkbox" id="mf-veg" checked></label>
+          <label class="check">Chef's Special <input type="checkbox" id="mf-special"></label>
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary" id="mf-submit">Add Item</button>
+            <button type="button" class="btn" id="mf-cancel" hidden>Cancel Edit</button>
+          </div>
+        </form>
+      </div>
+      <div class="card">
+        <div class="row-between">
+          <h3>Items</h3>
+          <select id="menu-filter"><option value="">All categories</option></select>
+        </div>
+        <div id="menu-list"></div>
+      </div>
+    </section>
+
+    <!-- TABLES -->
+    <section class="view" id="view-tables">
+      <h2>Tables</h2>
+      <div class="card">
+        <h3>Add Table</h3>
+        <form id="table-form" class="form-grid">
+          <label>Name <input id="tf-name" required maxlength="30" placeholder="e.g. Table 11"></label>
+          <label>PIN (3 digits) <input id="tf-pin" required pattern="[0-9]{3}" maxlength="3" placeholder="946"></label>
+          <label>Type
+            <select id="tf-type"><option value="table">Table</option><option value="room">Room / Lounge</option></select>
+          </label>
+          <div class="form-actions"><button type="submit" class="btn btn-primary">Add Table</button></div>
+        </form>
+      </div>
+      <div class="card"><div id="tables-list"></div></div>
+    </section>
+
+    <!-- ORDERS -->
+    <section class="view" id="view-orders">
+      <h2>Orders</h2>
+      <div class="row-between">
+        <div class="filter-row">
+          <button class="chip active" data-ofilter="">All</button>
+          <button class="chip" data-ofilter="New">New</button>
+          <button class="chip" data-ofilter="Preparing">Preparing</button>
+          <button class="chip" data-ofilter="Served">Served</button>
+          <button class="chip" data-ofilter="Paid">Paid</button>
+        </div>
+      </div>
+      <div id="orders-list"></div>
+    </section>
+
+    <!-- BILLING -->
+    <section class="view" id="view-billing">
+      <h2>Billing</h2>
+      <div class="card">
+        <label class="field-label">Occupied table
+          <select id="bill-table"><option value="">— Select a table —</option></select>
+        </label>
+      </div>
+      <div id="bill-area"></div>
+    </section>
+
+    <!-- ANALYTICS -->
+    <section class="view" id="view-analytics">
+      <h2>Analytics</h2>
+      <div class="stat-row" id="analytics-stats"></div>
+      <div class="grid-2">
+        <div class="card"><h3>Top Selling Items</h3><div id="top-items"></div></div>
+        <div class="card"><h3>Orders per Table</h3><div id="per-table"></div></div>
+      </div>
+      <div class="card"><h3>Recent Paid Orders</h3><div id="recent-paid"></div></div>
+    </section>
+
+    <!-- QR CODES -->
+    <section class="view" id="view-qrcodes">
+      <h2>QR Codes — Table Stands</h2>
+      <p class="muted">Print a stand for each table. Customers scan it to open the menu for that table. The QR opens this same app with <code>?table=N</code> — it works from wherever the app is hosted.</p>
+      <div class="row-between">
+        <button class="btn btn-primary" id="btn-print-stands">Print All Stands</button>
+      </div>
+      <div class="qr-grid" id="qr-stands"></div>
+    </section>
+
+    <!-- SETTINGS -->
+    <section class="view" id="view-settings">
+      <h2>Settings</h2>
+      <div class="card">
+        <form id="settings-form" class="form-grid">
+          <label>Restaurant name <input id="sf-name" required maxlength="60"></label>
+          <label>Address <input id="sf-address" maxlength="120"></label>
+          <label>UPI ID (for payment QR) <input id="sf-upi" required maxlength="60" placeholder="qrdine@okaxis"></label>
+          <label>Currency symbol <input id="sf-currency" maxlength="3" value="₹"></label>
+          <div class="form-actions"><button type="submit" class="btn btn-primary">Save Settings</button></div>
+        </form>
+        <p class="muted">Demo UPI ID is <code>qrdine@okaxis</code> — a placeholder. Replace it with the restaurant's real UPI ID before taking real payments. QR Dine never touches money; the UPI app handles the payment.</p>
+      </div>
+      <div class="card danger-zone">
+        <h3>Demo data</h3>
+        <p class="muted">Clears all orders, menu edits and settings and restores the original Hotel Annapurna demo data.</p>
+        <button class="btn btn-danger" id="btn-reset-demo">Reset Demo Data</button>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- ================= CUSTOMER SHELL ================= -->
+<div id="customer-shell" hidden>
+  <header class="cust-header">
+    <div class="cust-rest">
+      <h1 id="cust-rest-name">Hotel Annapurna</h1>
+      <p id="cust-rest-addr">Bokaro</p>
+    </div>
+    <span class="cust-table" id="cust-table-chip">Table 1</span>
+  </header>
+
+  <div class="cust-body" id="cust-menu-page">
+    <input id="cust-search" type="search" placeholder="Search dishes..." aria-label="Search dishes">
+    <div class="cust-tabs" id="cust-tabs"></div>
+    <div id="cust-items"></div>
+  </div>
+
+  <div class="cust-body" id="cust-cart-page" hidden>
+    <button class="btn btn-link" id="btn-back-menu">&larr; Back to menu</button>
+    <h2>Your Cart — <span id="cart-table-label">Table 1</span></h2>
+    <div id="cart-items"></div>
+    <div class="cart-total-row"><span>Total</span><strong id="cart-total">₹0</strong></div>
+    <form id="order-form" class="card form-stack">
+      <label>Your Name * <input id="of-name" required maxlength="40" placeholder="e.g. Akash"></label>
+      <label>Phone (optional) <input id="of-phone" type="tel" maxlength="15" placeholder="9876543210"></label>
+      <label>Cooking instructions (optional) <input id="of-notes" maxlength="120" placeholder="e.g. less spicy, extra gravy"></label>
+      <label>Table PIN * <input id="of-pin" required inputmode="numeric" maxlength="3" placeholder="Ask your waiter for the PIN"><small class="muted">The 3-digit PIN is printed on your table stand.</small></label>
+      <div class="form-error" id="order-error" hidden></div>
+      <button type="submit" class="btn btn-primary btn-block" id="btn-confirm-order">Confirm Order</button>
+    </form>
+  </div>
+
+  <div class="cust-body" id="cust-confirm-page" hidden>
+    <div class="card confirm-card">
+      <div class="confirm-tick">✓</div>
+      <h2>Order Confirmed</h2>
+      <p>Order <strong id="confirm-order-no"></strong> for <strong id="confirm-table"></strong></p>
+      <p class="muted" id="confirm-summary"></p>
+      <p class="muted">Your food is being prepared. The waiter will bring it to your table.</p>
+      <button class="btn btn-primary btn-block" id="btn-new-order">Order More</button>
+      <button class="btn btn-outline btn-block" id="btn-back-admin">Back to Dashboard</button>
+    </div>
+  </div>
+
+  <div class="cust-cartbar" id="cust-cartbar" hidden>
+    <span id="cartbar-text">0 items</span>
+    <button class="btn btn-primary" id="btn-view-cart">View Cart</button>
+  </div>
+</div>
+
+<!-- Table picker modal (admin → customer view) -->
+<div class="modal" id="table-picker" hidden>
+  <div class="modal-box">
+    <h3>Open customer menu for…</h3>
+    <div class="picker-grid" id="picker-grid"></div>
+    <button class="btn" id="picker-close">Cancel</button>
+  </div>
+</div>
+
+<!-- Print-only areas -->
+<div id="receipt"></div>
+<div id="stands-print"></div>
+
+<script src="app.js"></script>
+</body>
+</html>
